@@ -1,7 +1,6 @@
 package de.btegermany.terraplusminus;
 
 
-import com.mojang.brigadier.Command;
 import de.btegermany.terraplusminus.commands.OffsetCommand;
 import de.btegermany.terraplusminus.commands.TpllCommand;
 import de.btegermany.terraplusminus.commands.WhereCommand;
@@ -17,8 +16,8 @@ import io.papermc.paper.command.brigadier.Commands;
 import io.papermc.paper.plugin.lifecycle.event.LifecycleEventManager;
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 import net.buildtheearth.terraminusminus.TerraConfig;
+import net.buildtheearth.terraminusminus.util.http.Disk;
 import org.bukkit.Bukkit;
-import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.serialization.ConfigurationSerializable;
 import org.bukkit.configuration.serialization.ConfigurationSerialization;
@@ -34,6 +33,9 @@ import org.jetbrains.annotations.NotNull;
 import java.io.*;
 import java.util.List;
 import java.util.logging.Level;
+
+import static java.util.logging.Level.WARNING;
+import static net.daporkchop.lib.common.util.PValidation.checkState;
 
 public final class Terraplusminus extends JavaPlugin implements Listener {
     public static FileConfiguration config;
@@ -60,18 +62,11 @@ public final class Terraplusminus extends JavaPlugin implements Listener {
         this.updateConfig();
         // --------------------------
 
-        // Copies osm.json5 into terraplusplus/config/
-        File[] terraPlusPlusDirectories = {new File("terraminusminus"), new File("terraminusminus/config/")};
-        for (File file : terraPlusPlusDirectories) {
-            if (!file.exists()) {
-                file.mkdir();
-            }
-        }
-        File osmJsonFile = new File("terraminusminus" + File.separator + "config" + File.separator + "osm.json5");
-        if (!osmJsonFile.exists()) {
-            this.copyFileFromResource("/net/buildtheearth/terraminusminus/dataset/osm/osm.json5", osmJsonFile);
-        }
-        // --------------------------
+        // Set-up Terra-- so it looks for its config files in our plugin dir, and then copy its default files there
+        this.setupTerraMinusMinus();
+        this.extractTerraConfigFileToPluginDir("/net/buildtheearth/terraminusminus/dataset/osm/osm.json5", "osm.json5");
+        this.extractTerraConfigFileToPluginDir("config/readme-heights.md", "heights/README.md");
+        this.extractTerraConfigFileToPluginDir("config/readme-tree_cover.md", "tree_cover/README.md");
 
         // Register plugin messaging channel
         PlayerHashMapManagement playerHashMapManagement = new PlayerHashMapManagement();
@@ -275,4 +270,28 @@ public final class Terraplusminus extends JavaPlugin implements Listener {
             commands.register("offset", "Displays the x,y and z offset of your world", new OffsetCommand());
         });
     }
+
+    private void setupTerraMinusMinus() {
+        Disk.setConfigRoot(this.getDataFolder());
+        Disk.setCacheRoot(this.getDataPath().resolve("cache").toFile());
+    }
+
+    private void extractTerraConfigFileToPluginDir(@NotNull String resourcePath, @NotNull String dropPath) {
+        File droppedFile = this.getDataPath().resolve(dropPath).toFile();
+        if (droppedFile.exists()) {
+            this.getLogger().fine("Terra-- config file " + droppedFile.getAbsolutePath() + " is already present in plugin directory");
+            return;
+        }
+        if(droppedFile.getParentFile().mkdirs()) {
+            this.getLogger().fine("Created parent directory before extracting Terra-- configuration to: " + droppedFile.getAbsolutePath());
+        }
+        try (InputStream resourceStream = this.getClass().getResourceAsStream(resourcePath); OutputStream fileStream = new FileOutputStream(droppedFile)) {
+            checkState(resourceStream != null, "Missing internal resource: %s", resourcePath);
+            resourceStream.transferTo(fileStream);
+        } catch (IOException e) {
+            this.getLogger().log(WARNING, "Failed to drop a Terra configuration file in plugin directory", e);
+        }
+        this.getLogger().info("Created default Terra-- configuration at " + droppedFile.getAbsolutePath());
+    }
+
 }
