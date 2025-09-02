@@ -75,14 +75,6 @@
             <url>https://repo.papermc.io/repository/maven-public/</url>
         </repository>
         <repository>
-            <id>sonatype</id>
-            <url>https://oss.sonatype.org/content/groups/public/</url>
-        </repository>
-        <repository>
-            <id>OpenCollab Snapshots</id>
-            <url>https://repo.opencollab.dev/snapshot/</url>
-        </repository>
-        <repository>
             <id>smyler-releases</id>
             <name>Smyler's maven repository</name>
             <url>https://maven.smyler.net/releases/</url>
@@ -130,31 +122,13 @@
             <artifactId>guava</artifactId>
             <version>33.5.0-jre</version>
         </dependency>
-        <dependency> <!-- https://central.sonatype.com/artifact/org.apache.commons/commons-lang3 -->
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-lang3</artifactId>
-            <version>3.19.0</version>
-        </dependency>
         <dependency> <!-- https://central.sonatype.com/artifact/com.fasterxml.jackson.core/jackson-databind -->
+            <!--
+                Terra+- itself doesn't need Jackson, but we are hitting this JDK bug: https://bugs.openjdk.org/browse/JDK-8305250.
+                Having a direct compile dependency on Jackson gets rid of the unnecessary warning.
+            -->
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
-            <version>2.20.0</version>
-        </dependency>
-        <dependency> <!-- https://central.sonatype.com/artifact/io.netty/netty-buffer -->
-            <groupId>io.netty</groupId>
-            <artifactId>netty-buffer</artifactId>
-            <version>4.2.6.Final</version>
-            <scope>compile</scope>
-        </dependency>
-        <dependency> <!-- https://central.sonatype.com/artifact/org.jetbrains/annotations -->
-            <groupId>org.jetbrains</groupId>
-            <artifactId>annotations</artifactId>
-            <version>26.0.2-1</version>
-            <scope>compile</scope>
-        </dependency>
-        <dependency> <!-- https://central.sonatype.com/artifact/commons-io/commons-io -->
-            <groupId>commons-io</groupId>
-            <artifactId>commons-io</artifactId>
             <version>2.20.0</version>
         </dependency>
         <dependency> <!-- https://github.com/PorkStudios/PorkLib - needs to be the same as in TerraMinusMinus-->
