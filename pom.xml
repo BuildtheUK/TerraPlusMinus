@@ -41,6 +41,21 @@
                         </goals>
                         <configuration>
                             <createDependencyReducedPom>false</createDependencyReducedPom>
+                            <filters>
+                                <filter>
+                                    <!--
+                                        Exclude JAR signature files.
+                                        They correspond to the JARs of the libs we shade,
+                                        and are invalid for the resulting T+- JAR.
+                                    -->
+                                    <artifact>*:*</artifact>
+                                    <excludes>
+                                        <exclude>META-INF/*.SF</exclude>
+                                        <exclude>META-INF/*.DSA</exclude>
+                                        <exclude>META-INF/*.RSA</exclude>
+                                    </excludes>
+                                </filter>
+                            </filters>
                         </configuration>
                     </execution>
                 </executions>
@@ -70,11 +85,7 @@
         <repository>
             <id>smyler-releases</id>
             <name>Smyler's maven repository</name>
-            <url>https://maven.smyler.net/releases</url>
-        </repository>
-        <repository>
-            <id>Daporkchop_</id>
-            <url>https://maven.daporkchop.net/</url>
+            <url>https://maven.smyler.net/releases/</url>
         </repository>
         <repository>
             <id>dmulloy2-repo</id>
@@ -112,7 +123,7 @@
         <dependency> <!-- https://maven.smyler.net/#/releases/net/buildtheearth/terraminusminus/terraminusminus-bukkit -->
             <groupId>net.buildtheearth.terraminusminus</groupId>
             <artifactId>terraminusminus-bukkit</artifactId>
-            <version>2.0.0rc1-1.21.4</version>
+            <version>2.0.0-1.21.4</version>
         </dependency>
         <dependency> <!-- https://central.sonatype.com/artifact/com.google.guava/guava -->
             <groupId>com.google.guava</groupId>

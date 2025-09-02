@@ -61,13 +61,13 @@ public final class Terraplusminus extends JavaPlugin implements Listener {
         // --------------------------
 
         // Copies osm.json5 into terraplusplus/config/
-        File[] terraPlusPlusDirectories = {new File("terraplusplus"), new File("terraplusplus/config/")};
+        File[] terraPlusPlusDirectories = {new File("terraminusminus"), new File("terraminusminus/config/")};
         for (File file : terraPlusPlusDirectories) {
             if (!file.exists()) {
                 file.mkdir();
             }
         }
-        File osmJsonFile = new File("terraplusplus" + File.separator + "config" + File.separator + "osm.json5");
+        File osmJsonFile = new File("terraminusminus" + File.separator + "config" + File.separator + "osm.json5");
         if (!osmJsonFile.exists()) {
             this.copyFileFromResource("assets/terraplusminus/data/osm.json5", osmJsonFile);
         }

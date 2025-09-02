@@ -13,7 +13,6 @@ import net.buildtheearth.terraminusminus.projection.GeographicProjection;
 import net.buildtheearth.terraminusminus.projection.transform.OffsetProjectionTransform;
 import net.buildtheearth.terraminusminus.substitutes.BlockState;
 import net.buildtheearth.terraminusminus.substitutes.ChunkPos;
-import net.buildtheearth.terraminusminus.substitutes.TerraBukkit;
 import net.buildtheearth.terraminusminus.util.http.Http;
 import org.bukkit.HeightMap;
 import org.bukkit.Location;
@@ -36,6 +35,7 @@ import java.util.concurrent.TimeUnit;
 import static java.lang.Math.min;
 import static net.buildtheearth.terraminusminus.substitutes.ChunkPos.blockToCube;
 import static net.buildtheearth.terraminusminus.substitutes.ChunkPos.cubeToMinBlock;
+import static net.buildtheearth.terraminusminus.substitutes.TerraBukkit.toBukkitBlockData;
 import static org.bukkit.Material.BRICKS;
 import static org.bukkit.Material.DIRT;
 import static org.bukkit.Material.DIRT_PATH;
@@ -193,7 +193,7 @@ public class RealWorldGenerator extends ChunkGenerator {
                     material = this.materialMapping.get(state.getBlock().toString());
                     if (material == null) {
                         // We don't know what material this is, let's respect what the Terra-- configuration says
-                        material = TerraBukkit.toBukkitBlockData(state).getMaterial();
+                        material = toBukkitBlockData(state).getMaterial();
                     }
                 } else if (groundY >= startMountainHeight) {
                     material = STONE; // Mountains stare bare
