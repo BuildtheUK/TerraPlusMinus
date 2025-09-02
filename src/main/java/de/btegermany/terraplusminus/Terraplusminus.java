@@ -13,10 +13,13 @@ import de.btegermany.terraplusminus.utils.FileBuilder;
 import de.btegermany.terraplusminus.utils.LinkedWorld;
 import de.btegermany.terraplusminus.utils.PlayerHashMapManagement;
 import io.papermc.paper.command.brigadier.Commands;
+import io.papermc.paper.plugin.configuration.PluginMeta;
 import io.papermc.paper.plugin.lifecycle.event.LifecycleEventManager;
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 import net.buildtheearth.terraminusminus.TerraConfig;
+import net.buildtheearth.terraminusminus.TerraConstants;
 import net.buildtheearth.terraminusminus.util.http.Disk;
+import net.buildtheearth.terraminusminus.util.http.Http;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.serialization.ConfigurationSerializable;
@@ -32,8 +35,10 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.*;
 import java.util.List;
+import java.util.Locale;
 import java.util.logging.Level;
 
+import static java.lang.String.format;
 import static java.util.logging.Level.WARNING;
 import static net.daporkchop.lib.common.util.PValidation.checkState;
 
@@ -274,6 +279,23 @@ public final class Terraplusminus extends JavaPlugin implements Listener {
     private void setupTerraMinusMinus() {
         Disk.setConfigRoot(this.getDataFolder());
         Disk.setCacheRoot(this.getDataPath().resolve("cache").toFile());
+
+        String userAgent = this.createHttpUserAgent();
+        this.getLogger().fine("Terraplusminus HTTP user agent: " + userAgent);
+        Http.userAgent(userAgent);
+    }
+
+    // This method has to rely on the unstable paper API as we use paper-plugin.yml, which itself is experimental
+    @SuppressWarnings("UnstableApiUsage")
+    private String createHttpUserAgent() {
+        PluginMeta metadata = this.getPluginMeta();
+        return format(Locale.ENGLISH, "%s/%s (%s/%s; +%s)",
+                metadata.getName(),
+                metadata.getVersion(),
+                TerraConstants.LIB_NAME,
+                TerraConstants.LIB_VERSION,
+                metadata.getWebsite()
+        );
     }
 
     private void extractTerraConfigFileToPluginDir(@NotNull String resourcePath, @NotNull String dropPath) {
