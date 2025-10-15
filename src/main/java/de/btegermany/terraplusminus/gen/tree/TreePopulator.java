@@ -35,7 +35,6 @@ import java.util.Random;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
 
 public class TreePopulator extends BlockPopulator {
 
@@ -74,7 +73,7 @@ public class TreePopulator extends BlockPopulator {
 
             trees.put(treeSizes.getKey(), new ArrayList<>());
 
-            Bukkit.getLogger().log(Level.INFO, "[T+-] Loading Tree Type " + treeSizes.getKey());
+            Terraplusminus.instance.getComponentLogger().info("Loading Tree Type {}", treeSizes.getKey());
 
             treeSizes.getValue().getAsJsonObject().entrySet().forEach(treeNames -> {
 
@@ -97,7 +96,7 @@ public class TreePopulator extends BlockPopulator {
             });
 
         });
-        Bukkit.getLogger().log(Level.INFO, "[T+-] Finished loading " + treeCount[0] + " custom trees");
+        Terraplusminus.instance.getComponentLogger().info("Finished loading {} custom trees", treeCount[0]);
 
     }
 

@@ -36,10 +36,8 @@ import org.jetbrains.annotations.NotNull;
 import java.io.*;
 import java.util.List;
 import java.util.Locale;
-import java.util.logging.Level;
 
 import static java.lang.String.format;
-import static java.util.logging.Level.WARNING;
 import static net.daporkchop.lib.common.util.PValidation.checkState;
 
 public final class Terraplusminus extends JavaPlugin implements Listener {
@@ -52,13 +50,13 @@ public final class Terraplusminus extends JavaPlugin implements Listener {
         PluginDescriptionFile pdf = this.getDescription();
         String pluginVersion = pdf.getVersion();
 
-        getLogger().log(Level.INFO, "\n╭━━━━╮\n" +
+        this.getComponentLogger().info("\n╭━━━━╮\n" +
                 "┃╭╮╭╮┃\n" +
                 "╰╯┃┃┣┻━┳━┳━┳━━╮╭╮\n" +
                 "╱╱┃┃┃┃━┫╭┫╭┫╭╮┣╯╰┳━━╮\n" +
                 "╱╱┃┃┃┃━┫┃┃┃┃╭╮┣╮╭┻━━╯\n" +
                 "╱╱╰╯╰━━┻╯╰╯╰╯╰╯╰╯\n" +
-                "Version: " + pluginVersion);
+                "Version: {}", pluginVersion);
 
         // Config ------------------]
         ConfigurationSerialization.registerClass(ConfigurationSerializable.class);
@@ -93,7 +91,7 @@ public final class Terraplusminus extends JavaPlugin implements Listener {
 
         registerCommands();
 
-        Bukkit.getLogger().log(Level.INFO, "[T+-] Terraplusminus successfully enabled");
+        this.getComponentLogger().info("Terraplusminus successfully enabled");
     }
 
     @Override
@@ -103,7 +101,7 @@ public final class Terraplusminus extends JavaPlugin implements Listener {
         this.getServer().getMessenger().unregisterIncomingPluginChannel(this);
         // --------------------------
 
-        Bukkit.getLogger().log(Level.INFO, "[T+-] Plugin deactivated");
+        this.getComponentLogger().info("Plugin deactivated");
     }
 
     @EventHandler
@@ -143,7 +141,7 @@ public final class Terraplusminus extends JavaPlugin implements Listener {
         try {
             out = new FileOutputStream(destination);
         } catch (FileNotFoundException e) {
-            Bukkit.getLogger().log(Level.SEVERE, "[T+-] " + destination.getName() + " not found");
+            this.getComponentLogger().error("{} not found", destination.getName());
             throw new RuntimeException(e);
         }
         byte[] buf = new byte[1024];
@@ -153,13 +151,13 @@ public final class Terraplusminus extends JavaPlugin implements Listener {
                 out.write(buf, 0, len);
             }
         } catch (IOException io) {
-            Bukkit.getLogger().log(Level.SEVERE, "[T+-] Could not copy " + destination);
+            this.getComponentLogger().error("Could not copy {}", destination);
         } finally {
             try {
                 out.close();
                 if (resourcePath.equals("world-height-datapack.zip")) {
-                    Bukkit.getLogger().log(Level.CONFIG, "[T+-] Copied datapack to world folder");
-                    Bukkit.getLogger().log(Level.SEVERE, "[T+-] Stopping server to start again with datapack");
+                    this.getComponentLogger().info("Copied datapack to world folder");
+                    this.getComponentLogger().error("Stopping server to start again with datapack");
                     Bukkit.getServer().shutdown();
                 }
             } catch (IOException e) {
@@ -176,7 +174,7 @@ public final class Terraplusminus extends JavaPlugin implements Listener {
             configVersion = this.config.getDouble("config_version");
         } catch (Exception e) {
             e.printStackTrace();
-            Bukkit.getLogger().log(Level.SEVERE, "[T+-] Old config detected. Please delete and restart/reload.");
+            this.getComponentLogger().error("Old config detected. Please delete and restart/reload.");
         }
         if (configVersion == 1.0) {
             String passthroughTpll = Terraplusminus.config.getString("passthrough_tpll");
@@ -281,7 +279,7 @@ public final class Terraplusminus extends JavaPlugin implements Listener {
         Disk.setCacheRoot(this.getDataPath().resolve("cache").toFile());
 
         String userAgent = this.createHttpUserAgent();
-        this.getLogger().fine("Terraplusminus HTTP user agent: " + userAgent);
+        this.getComponentLogger().debug("Terraplusminus HTTP user agent: {}", userAgent);
         Http.userAgent(userAgent);
     }
 
@@ -300,19 +298,19 @@ public final class Terraplusminus extends JavaPlugin implements Listener {
     private void extractTerraConfigFileToPluginDir(@NotNull String resourcePath, @NotNull String dropPath) {
         File droppedFile = this.getDataPath().resolve(dropPath).toFile();
         if (droppedFile.exists()) {
-            this.getLogger().fine("Terra-- config file " + droppedFile.getAbsolutePath() + " is already present in plugin directory");
+            this.getComponentLogger().debug("Terra-- config file {} is already present in plugin directory", droppedFile.getAbsolutePath());
             return;
         }
         if(droppedFile.getParentFile().mkdirs()) {
-            this.getLogger().fine("Created parent directory before extracting Terra-- configuration to: " + droppedFile.getAbsolutePath());
+            this.getComponentLogger().trace("Created parent directory before extracting Terra-- configuration to: {}", droppedFile.getAbsolutePath());
         }
         try (InputStream resourceStream = this.getClass().getResourceAsStream(resourcePath); OutputStream fileStream = new FileOutputStream(droppedFile)) {
             checkState(resourceStream != null, "Missing internal resource: %s", resourcePath);
             resourceStream.transferTo(fileStream);
         } catch (IOException e) {
-            this.getLogger().log(WARNING, "Failed to drop a Terra configuration file in plugin directory", e);
+            this.getComponentLogger().warn("Failed to drop a Terra configuration file in plugin directory", e);
         }
-        this.getLogger().info("Created default Terra-- configuration at " + droppedFile.getAbsolutePath());
+        this.getComponentLogger().info("Created default Terra-- configuration at {}", droppedFile.getAbsolutePath());
     }
 
 }

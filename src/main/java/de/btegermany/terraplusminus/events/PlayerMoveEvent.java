@@ -19,7 +19,6 @@ import org.bukkit.scheduler.BukkitRunnable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.logging.Level;
 
 import static java.lang.String.valueOf;
 import static org.bukkit.ChatColor.BOLD;
@@ -54,7 +53,7 @@ public class PlayerMoveEvent implements Listener {
             for (LinkedWorld world : worlds) {
                 this.worldHashMap.put(world.getWorldName(), world.getOffset());
             }
-            Bukkit.getLogger().log(Level.INFO, "[T+-] Linked worlds enabled, using Multiverse method.");
+            Terraplusminus.instance.getComponentLogger().info("Linked worlds enabled, using Multiverse method.");
         } /*
         else {
             for (World world : Bukkit.getServer().getWorlds()) { // plugin loaded before worlds initialized, so that does not work
