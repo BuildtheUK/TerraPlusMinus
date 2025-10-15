@@ -69,7 +69,7 @@ public final class Terraplusminus extends JavaPlugin implements Listener {
         }
         File osmJsonFile = new File("terraminusminus" + File.separator + "config" + File.separator + "osm.json5");
         if (!osmJsonFile.exists()) {
-            this.copyFileFromResource("assets/terraplusminus/data/osm.json5", osmJsonFile);
+            this.copyFileFromResource("/net/buildtheearth/terraminusminus/dataset/osm/osm.json5", osmJsonFile);
         }
         // --------------------------
 
