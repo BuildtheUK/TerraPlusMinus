@@ -27,6 +27,18 @@
                 <configuration>
                     <source>21</source>
                     <target>21</target>
+                    <annotationProcessorPaths>
+                        <!--
+                            Automatic execution of annotation processors in the classpath is being deprecated,
+                            and removed in Java 22 (see https://bugs.java.com/bugdatabase/view_bug?bug_id=8321314).
+                            We therefore need to explicitly tell Maven to run Lombok's.
+                        -->
+                        <path>
+                            <groupId>org.projectlombok</groupId> <!-- https://central.sonatype.com/artifact/org.projectlombok/lombok -->
+                            <artifactId>lombok</artifactId>
+                            <version>1.18.42</version>
+                        </path>
+                    </annotationProcessorPaths>
                 </configuration>
             </plugin>
             <plugin> <!-- https://central.sonatype.com/artifact/org.apache.maven.plugins/maven-shade-plugin -->
