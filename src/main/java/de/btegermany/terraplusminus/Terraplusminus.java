@@ -9,7 +9,7 @@ import de.btegermany.terraplusminus.events.PlayerMoveEvent;
 import de.btegermany.terraplusminus.events.PluginMessageEvent;
 import de.btegermany.terraplusminus.gen.RealWorldGenerator;
 import de.btegermany.terraplusminus.utils.ConfigurationHelper;
-import de.btegermany.terraplusminus.utils.FileBuilder;
+import de.btegermany.terraplusminus.utils.PluginConfigManipulator;
 import de.btegermany.terraplusminus.utils.LinkedWorld;
 import de.btegermany.terraplusminus.utils.PlayerHashMapManagement;
 import io.papermc.paper.command.brigadier.Commands;
@@ -165,9 +165,9 @@ public final class Terraplusminus extends JavaPlugin implements Listener {
     }
 
     private void updateConfig() {
-        new FileBuilder(this);  // Sets FileBuilder#plugin (static field)
+        PluginConfigManipulator manipulator = new PluginConfigManipulator(this);
 
-        double configVersion = this.config.getDouble("config_version");
+        double configVersion = Terraplusminus.config.getDouble("config_version");
 
         if (configVersion == 0.0) {  // That's the default value if the field was not set at all in the YAML
             this.getComponentLogger().error("Old config detected. Please delete and restart/reload.");
@@ -177,86 +177,117 @@ public final class Terraplusminus extends JavaPlugin implements Listener {
             if (passthroughTpll == null) {
                 passthroughTpll = "";
             }
-            int y = (int) this.config.getDouble("terrain_offset");
-            this.config.set("terrain_offset.x", 0);
-            this.config.set("terrain_offset.y", y);
-            this.config.set("terrain_offset.z", 0);
-            this.config.set("config_version", 1.1);
+            int y = (int) Terraplusminus.config.getDouble("terrain_offset");
+            Terraplusminus.config.set("terrain_offset.x", 0);
+            Terraplusminus.config.set("terrain_offset.y", y);
+            Terraplusminus.config.set("terrain_offset.z", 0);
+            Terraplusminus.config.set("config_version", 1.1);
             this.saveConfig();
-            FileBuilder.addLineAbove("terrain_offset", "\n" +
-                    "# Generation -------------------------------------------\n" +
-                    "# Offset your section which fits into the world.");
-            FileBuilder.deleteLine("# Passthrough tpll");
-            FileBuilder.deleteLine("passthrough_tpll");
-            FileBuilder.addLineAbove("# Generation", "# Passthrough tpll to other bukkit plugins. It will not passthrough when it's empty. Type in the name of your plugin. E.g. Your plugin name is vanillatpll you set passthrough_tpll: 'vanillatpll'\n" +
-                    "passthrough_tpll: '" + passthroughTpll + "'\n\n\n"); //Fixes empty config entry from passthrough_tpll
+            manipulator.addLineAbove(
+                    "terrain_offset",
+                    """
+                    
+                    # Generation -------------------------------------------
+                    # Offset your section which fits into the world."""
+            );
+            manipulator.deleteLine("# Passthrough tpll");
+            manipulator.deleteLine("passthrough_tpll");
+            manipulator.addLineAbove(
+                    "# Generation",
+                    """
+                    # Passthrough tpll to other bukkit plugins. It will not passthrough when it's empty. Type in the name of your plugin. E.g. Your plugin name is vanillatpll you set passthrough_tpll: 'vanillatpll'
+                    passthrough_tpll: 'PASSTHROUGH_TPLL'
+                    
+                    
+                    """.replace("PASSTHROUGH_TPLL", passthroughTpll)); //Fixes empty config entry from passthrough_tpll
 
         }
         if (configVersion == 1.1) {
-            this.config.set("config_version", 1.2);
+            Terraplusminus.config.set("config_version", 1.2);
             this.saveConfig();
-            FileBuilder.addLineAbove("# If disabled, tree generation is turned off.", "" +
-                    "# Linked servers ---------------------------------------\n" +
-                    "# If the height limit on this server is not enough, other servers can be linked to generate higher or lower sections.\n" +
-                    "linked_servers:\n" +
-                    "  enabled: false\n" +
-                    "  servers:\n" +
-                    "    - another_server                 # e.g. this server has a datapack to extend height to 2032. it covers the height section (-2032) - (-1) m a.s.l. it has a y-offset of -2032.\n" +
-                    "    - current_server                 # e.g. this server has a datapack to extend height to 2032. it covers the height section 0 - 2032 m a.s.l.\n" +
-                    "    - another_server                 # e.g. this server has a datapack to extend height to 2032. it covers the height section 2033 - 4064 m a.s.l. it has a y-offset of 2032\n");
+            manipulator.addLineAbove(
+                    "# If disabled, tree generation is turned off.",
+                    """
+                    # Linked servers ---------------------------------------
+                    # If the height limit on this server is not enough, other servers can be linked to generate higher or lower sections.
+                    linked_servers:
+                      enabled: false
+                      servers:
+                        - another_server                 # e.g. this server has a datapack to extend height to 2032. it covers the height section (-2032) - (-1) m a.s.l. it has a y-offset of -2032.
+                        - current_server                 # e.g. this server has a datapack to extend height to 2032. it covers the height section 0 - 2032 m a.s.l.
+                        - another_server                 # e.g. this server has a datapack to extend height to 2032. it covers the height section 2033 - 4064 m a.s.l. it has a y-offset of 2032
+                    """
+            );
         }
         if (configVersion == 1.2) {
-            this.config.set("config_version", 1.3);
+            Terraplusminus.config.set("config_version", 1.3);
             this.saveConfig();
-            FileBuilder.deleteLine("# Linked servers -------------------------------------");
-            FileBuilder.deleteLine("# If the height limit on this server is not enough, other servers can be linked to generate higher or lower sections");
-            FileBuilder.deleteLine("linked_servers:");
-            FileBuilder.deleteLine("  enabled: false");
-            FileBuilder.deleteLine("  servers:");
-            FileBuilder.deleteLine("- another_server");
-            FileBuilder.deleteLine("- current_server");
-            FileBuilder.addLineAbove("# If disabled, tree generation is turned off.", "" +
-                    "# Linked worlds ---------------------------------------\n" +
-                    "# If the height limit in this world/server is not enough, other worlds/servers can be linked to generate higher or lower sections\n" +
-                    "linked_worlds:\n" +
-                    "  enabled: false\n" +
-                    "  method: 'SERVER'                         # 'SERVER' or 'MULTIVERSE'\n" +
-                    "  # if method = MULTIVERSE -> world_name, y-offset\n" +
-                    "  worlds:\n" +
-                    "    - another_world/server                 # e.g. this world/server has a datapack to extend height to 2032. it covers the height section (-2032) - (-1) m a.s.l. it has a y-offset of -2032.\n" +
-                    "    - current_world/server                 # do not change! e.g. this world/server has a datapack to extend height to 2032. it covers the height section 0 - 2032 m a.s.l.\n" +
-                    "    - another_world/server                 # e.g. this world/server has a datapack to extend height to 2032. it covers the height section 2033 - 4064 m a.s.l. it has a y-offset of 2032\n\n");
+            manipulator.deleteLine("# Linked servers -------------------------------------");
+            manipulator.deleteLine("# If the height limit on this server is not enough, other servers can be linked to generate higher or lower sections");
+            manipulator.deleteLine("linked_servers:");
+            manipulator.deleteLine("  enabled: false");
+            manipulator.deleteLine("  servers:");
+            manipulator.deleteLine("- another_server");
+            manipulator.deleteLine("- current_server");
+            manipulator.addLineAbove(
+                    "# If disabled, tree generation is turned off.",
+                    """
+                    # Linked worlds ---------------------------------------
+                    # If the height limit in this world/server is not enough, other worlds/servers can be linked to generate higher or lower sections
+                    linked_worlds:
+                      enabled: false
+                      method: 'SERVER'                         # 'SERVER' or 'MULTIVERSE'
+                      # if method = MULTIVERSE -> world_name, y-offset
+                      worlds:
+                        - another_world/server                 # e.g. this world/server has a datapack to extend height to 2032. it covers the height section (-2032) - (-1) m a.s.l. it has a y-offset of -2032.
+                        - current_world/server                 # do not change! e.g. this world/server has a datapack to extend height to 2032. it covers the height section 0 - 2032 m a.s.l.
+                        - another_world/server                 # e.g. this world/server has a datapack to extend height to 2032. it covers the height section 2033 - 4064 m a.s.l. it has a y-offset of 2032
+                    """
+            );
         }
         if (configVersion == 1.3) {
-            this.config.set("config_version", 1.4);
+            Terraplusminus.config.set("config_version", 1.4);
             this.saveConfig();
-            FileBuilder.addLineAfter("prefix:",
-                    "\n# If disabled, the plugin will log every fetched data to the console\n" +
-                            "reduced_console_messages: true");
-            FileBuilder.deleteLine("- another_world/server");
-            FileBuilder.deleteLine("- current_world/server");
-            FileBuilder.addLineAbove("# If disabled, tree generation is turned off.",
-                    "    - name: another_world/server          # e.g. this world/server has a datapack to extend height to 2032. it covers the height section (-2032) - (-1) m a.s.l. it has a y-offset of -2032.\n" +
-                            "      offset: 2032\n" +
-                            "    - name: current_world/server                 # e.g. this world/server has a datapack to extend height to 2032. it covers the height section 0 - 2032 m a.s.l.\n" +
-                            "      offset: 0\n" +
-                            "    - name: another_world/server                 # e.g. this world/server has a datapack to extend height to 2032. it covers the height section 2033 - 4064 m a.s.l. it has a y-offset of 2032\n" +
-                            "      offset: -2032\n\n");
+            manipulator.addLineBelow(
+                    "prefix:",
+                    """
+                    
+                    # If disabled, the plugin will log every fetched data to the console
+                    reduced_console_messages: true"""
+            );
+            manipulator.deleteLine("- another_world/server");
+            manipulator.deleteLine("- current_world/server");
+            manipulator.addLineAbove(
+                    "# If disabled, tree generation is turned off.",
+                        """
+                        - name: another_world/server          # e.g. this world/server has a datapack to extend height to 2032. it covers the height section (-2032) - (-1) m a.s.l. it has a y-offset of -2032.
+                          offset: 2032
+                        - name: current_world/server                 # e.g. this world/server has a datapack to extend height to 2032. it covers the height section 0 - 2032 m a.s.l.
+                          offset: 0
+                        - name: another_world/server                 # e.g. this world/server has a datapack to extend height to 2032. it covers the height section 2033 - 4064 m a.s.l. it has a y-offset of 2032
+                          offset: -2032
+                    
+                    """);
         }
         if (configVersion == 1.4) {
-            this.config.set("config_version", 1.5);
+            Terraplusminus.config.set("config_version", 1.5);
             this.saveConfig();
             boolean differentBiomes = Terraplusminus.config.getBoolean("different_biomes");
-            FileBuilder.deleteLine("# The biomes will be generated with https://en.wikipedia.org/wiki/K%C3%B6ppen_climate_classification.");
-            FileBuilder.deleteLine("# If turned off, everything will be plains biome.");
-            FileBuilder.deleteLine("different_biomes:");
-            FileBuilder.addLineAbove("# Customize the material, the blocks will be generated with.",
-                    "biomes:\n" +
-                    "  # If 'use_dataset' is enabled, biomes will be generated based on: https://en.wikipedia.org/wiki/K%C3%B6ppen_climate_classification.\n" +
-                    "  use_dataset: " + differentBiomes + "\n" +
-                    "  # If 'use_dataset' is disabled, this biome will be used everywhere instead (if 'generate_trees' is also enabled -> oak and birch).\n" +
-                    "  # Possible values found in \"Resource location\" on: https://minecraft.wiki/w/Biome#Biome_IDs (use with namespace e.g. minecraft:plains)\n" +
-                    "  biome: minecraft:plains\n\n");
+            manipulator.deleteLine("# The biomes will be generated with https://en.wikipedia.org/wiki/K%C3%B6ppen_climate_classification.");
+            manipulator.deleteLine("# If turned off, everything will be plains biome.");
+            manipulator.deleteLine("different_biomes:");
+            manipulator.addLineAbove(
+                    "# Customize the material, the blocks will be generated with.",
+                    """
+                    biomes:
+                      # If 'use_dataset' is enabled, biomes will be generated based on: https://en.wikipedia.org/wiki/K%C3%B6ppen_climate_classification.
+                      use_dataset: USE_DATASET
+                      # If 'use_dataset' is disabled, this biome will be used everywhere instead (if 'generate_trees' is also enabled -> oak and birch).
+                      # Possible values found in "Resource location" on: https://minecraft.wiki/w/Biome#Biome_IDs (use with namespace e.g. minecraft:plains)
+                      biome: minecraft:plains
+                    
+                    """.replace("USE_DATASET", "" + differentBiomes)
+            );
         }
     }
 
