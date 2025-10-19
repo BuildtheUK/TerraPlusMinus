@@ -36,6 +36,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
+
 public class TreePopulator extends BlockPopulator {
 
     public static final Cached<byte[]> RNG_CACHE = Cached.threadLocal(() -> new byte[16 * 16], ReferenceStrength.SOFT);
@@ -125,7 +126,10 @@ public class TreePopulator extends BlockPopulator {
                                 waterY = data.waterHeight(valueX, valueZ);
                                 state = data.surfaceBlock(valueX, valueZ);
                             } catch (IndexOutOfBoundsException e) {
-                                e.printStackTrace();
+                                Terraplusminus.instance.getComponentLogger().warn(
+                                        "Chunk boundary overflow when attempting to generate a tree at chunk {}/{}",
+                                        x, z
+                                );
                             }
 
                             if (groundY < waterY) {
@@ -158,7 +162,12 @@ public class TreePopulator extends BlockPopulator {
 
 
             } catch (InterruptedException | ExecutionException e) {
-                e.printStackTrace();
+                Terraplusminus.instance.getComponentLogger().warn(
+                        "Exception when generating trees in chunk {}/{} in world {}",
+                        x, z,
+                        worldInfo.getName(),
+                        e
+                );
             }
         }
     }

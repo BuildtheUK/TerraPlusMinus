@@ -1,5 +1,6 @@
 package de.btegermany.terraplusminus.utils;
 
+import de.btegermany.terraplusminus.Terraplusminus;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -9,6 +10,8 @@ import org.bukkit.plugin.Plugin;
 import java.io.*;
 import java.util.List;
 import java.util.Set;
+
+import static java.util.logging.Level.SEVERE;
 
 public class FileBuilder {
     private File file = null;
@@ -139,7 +142,7 @@ public class FileBuilder {
             inputFile.delete();
             tempFile.renameTo(inputFile);
         } catch (IOException e) {
-            e.printStackTrace();
+            Terraplusminus.instance.getComponentLogger().error("Failed to delete line from config with needle '{}'", path, e);
         }
     }
 
@@ -165,7 +168,7 @@ public class FileBuilder {
             inputFile.delete();
             tempFile.renameTo(inputFile);
         } catch (IOException e) {
-            e.printStackTrace();
+            Terraplusminus.instance.getComponentLogger().error("Failed to insert line above from config with needle '{}'", path, e);
         }
     }
 
@@ -191,7 +194,7 @@ public class FileBuilder {
             inputFile.delete();
             tempFile.renameTo(inputFile);
         } catch (IOException e) {
-            e.printStackTrace();
+            Terraplusminus.instance.getComponentLogger().error("Failed to insert line below from config with needle '{}'", path, e);
         }
     }
 

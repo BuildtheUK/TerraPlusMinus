@@ -165,13 +165,11 @@ public final class Terraplusminus extends JavaPlugin implements Listener {
     }
 
     private void updateConfig() {
-        FileBuilder fileBuilder = new FileBuilder(this);
+        new FileBuilder(this);  // Sets FileBuilder#plugin (static field)
 
-        Double configVersion = null;
-        try {
-            configVersion = this.config.getDouble("config_version");
-        } catch (Exception e) {
-            e.printStackTrace();
+        double configVersion = this.config.getDouble("config_version");
+
+        if (configVersion == 0.0) {  // That's the default value if the field was not set at all in the YAML
             this.getComponentLogger().error("Old config detected. Please delete and restart/reload.");
         }
         if (configVersion == 1.0) {
