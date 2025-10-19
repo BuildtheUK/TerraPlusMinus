@@ -30,7 +30,6 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.world.WorldInitEvent;
 import org.bukkit.generator.ChunkGenerator;
 import org.bukkit.plugin.Plugin;
-import org.bukkit.plugin.PluginDescriptionFile;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 
@@ -49,16 +48,6 @@ public final class Terraplusminus extends JavaPlugin implements Listener {
     @Override
     public void onEnable() {
         instance = this;
-        PluginDescriptionFile pdf = this.getDescription();
-        String pluginVersion = pdf.getVersion();
-
-        this.getComponentLogger().info("\n╭━━━━╮\n" +
-                "┃╭╮╭╮┃\n" +
-                "╰╯┃┃┣┻━┳━┳━┳━━╮╭╮\n" +
-                "╱╱┃┃┃┃━┫╭┫╭┫╭╮┣╯╰┳━━╮\n" +
-                "╱╱┃┃┃┃━┫┃┃┃┃╭╮┣╮╭┻━━╯\n" +
-                "╱╱╰╯╰━━┻╯╰╯╰╯╰╯╰╯\n" +
-                "Version: {}", pluginVersion);
 
         // Config ------------------]
         ConfigurationSerialization.registerClass(ConfigurationSerializable.class);
@@ -93,7 +82,10 @@ public final class Terraplusminus extends JavaPlugin implements Listener {
 
         registerCommands();
 
-        this.getComponentLogger().info("Terraplusminus successfully enabled");
+        this.getComponentLogger().info(
+                "Terraplusminus successfully enabled ({} v{}, {} v{})",
+                this.getName(), this.getVersion(), TerraConstants.LIB_NAME, TerraConstants.LIB_VERSION
+        );
     }
 
     @Override
@@ -308,6 +300,12 @@ public final class Terraplusminus extends JavaPlugin implements Listener {
         String userAgent = this.createHttpUserAgent();
         this.getComponentLogger().debug("Terraplusminus HTTP user agent: {}", userAgent);
         Http.userAgent(userAgent);
+    }
+
+    // The old way is deprecated and the new one is experimental, let's go with the new one
+    private String getVersion() {
+        PluginMeta meta = this.getPluginMeta();
+        return meta.getVersion();
     }
 
     // This method has to rely on the unstable paper API as we use paper-plugin.yml, which itself is experimental
