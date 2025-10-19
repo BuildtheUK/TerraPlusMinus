@@ -21,6 +21,7 @@ import net.buildtheearth.terraminusminus.TerraConstants;
 import net.buildtheearth.terraminusminus.util.http.Disk;
 import net.buildtheearth.terraminusminus.util.http.Http;
 import org.bukkit.Bukkit;
+import org.bukkit.World;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.serialization.ConfigurationSerializable;
 import org.bukkit.configuration.serialization.ConfigurationSerialization;
@@ -34,6 +35,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.*;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Locale;
 
@@ -106,14 +108,13 @@ public final class Terraplusminus extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onWorldInit(WorldInitEvent event) {
-        String datapackName = "world-height-datapack.zip";
-        File datapackPath = new File(event.getWorld().getWorldFolder() + File.separator + "datapacks" + File.separator + datapackName);
-        if (Terraplusminus.config.getBoolean("height_datapack")) {
-            if (!event.getWorld().getName().contains("_nether") && !event.getWorld().getName().contains("_the_end")) { //event.getWorld().getGenerator() is null here
-                if (!datapackPath.exists()) {
-                    copyFileFromResource(datapackName, datapackPath);
-                }
-            }
+        World world = event.getWorld();
+        boolean shouldInstallHeightDatapack = Terraplusminus.config.getBoolean("height_datapack");
+        boolean isDefaultWorld = Bukkit.getWorlds().getFirst().getUID().equals(world.getUID());
+        if (shouldInstallHeightDatapack && isDefaultWorld) {
+            // Datapacks should be installed in the default world and will apply to all of them.
+            // Getting the default world this way is reliable according to https://www.spigotmc.org/threads/ask-getting-the-servers-main-world.349626/#post-3238378
+            this.enforceDatapackInstallation("world-height-datapack.zip", world);
         }
     }
 
@@ -135,35 +136,32 @@ public final class Terraplusminus extends JavaPlugin implements Listener {
     }
 
 
-    public void copyFileFromResource(String resourcePath, File destination) {
-        InputStream in = getResource(resourcePath);
-        OutputStream out;
-        try {
-            out = new FileOutputStream(destination);
-        } catch (FileNotFoundException e) {
-            this.getComponentLogger().error("{} not found", destination.getName());
-            throw new RuntimeException(e);
+    public void enforceDatapackInstallation(String datapackResourcePath, World world) {
+        String datapackName = Path.of(datapackResourcePath).getFileName().toString();
+        File droppedFile = world
+                .getWorldFolder().toPath()
+                .resolve("datapacks")
+                .resolve(datapackName)
+                .toFile();
+        if (droppedFile.exists()) {
+            this.getComponentLogger().debug("Datapack {} was already installed in world {}", datapackName, world.getName());
+            return;
         }
-        byte[] buf = new byte[1024];
-        int len;
-        try {
-            while ((len = in.read(buf)) > 0) {
-                out.write(buf, 0, len);
-            }
+        try(InputStream in = this.getResource(datapackResourcePath); OutputStream out = new FileOutputStream(droppedFile)) {
+            checkState(in != null, "Missing internal resource: %s", datapackResourcePath);
+            in.transferTo(out);
         } catch (IOException io) {
-            this.getComponentLogger().error("Could not copy {}", destination);
-        } finally {
-            try {
-                out.close();
-                if (resourcePath.equals("world-height-datapack.zip")) {
-                    this.getComponentLogger().info("Copied datapack to world folder");
-                    this.getComponentLogger().error("Stopping server to start again with datapack");
-                    Bukkit.getServer().shutdown();
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            this.getComponentLogger().error(
+                    "Failed to extract datapack from resource '{}' to '{}'",
+                    datapackResourcePath, droppedFile.getAbsolutePath()
+            );
+            throw new RuntimeException(io);
         }
+        this.getComponentLogger().error(
+                "Datapack {} was missing from world {} and has been automatically installed by Terraplusminus. The server needs to be manually restarted for the change to take effect. Terraplusminus will now shutdown the server so it can be restarted.",
+                datapackName, world.getName()
+        );
+        Bukkit.getServer().shutdown();
     }
 
     private void updateConfig() {
