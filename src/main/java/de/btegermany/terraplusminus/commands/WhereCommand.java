@@ -9,6 +9,7 @@ import net.md_5.bungee.api.chat.ClickEvent;
 import net.md_5.bungee.api.chat.ComponentBuilder;
 import net.md_5.bungee.api.chat.HoverEvent;
 import net.md_5.bungee.api.chat.TextComponent;
+import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
@@ -30,20 +31,19 @@ public class WhereCommand implements BasicCommand {
         int xOffset = Terraplusminus.config.getInt("terrain_offset.x");
         int zOffset = Terraplusminus.config.getInt("terrain_offset.z");
 
-        double[] mcCoordinates = new double[2];
-        mcCoordinates[0] = player.getLocation().getX() - xOffset;
-        mcCoordinates[1] = player.getLocation().getZ() - zOffset;
-        System.out.println(mcCoordinates[0] + ", " + mcCoordinates[1]);
-        double[] coordinates = new double[0];
+        TextComponent message = new TextComponent(Terraplusminus.config.getString("prefix"));
+
+        double playerX = player.getLocation().getX() - xOffset;
+        double playerZ = player.getLocation().getZ() - zOffset;
         try {
-            coordinates = bteGeneratorSettings.projection().toGeo(mcCoordinates[0], mcCoordinates[1]);
+            double[] coordinates = this.bteGeneratorSettings.projection().toGeo(playerX, playerZ);
+            message.addExtra("§7Your coordinates are:");
+            message.addExtra("\n§8" + coordinates[1] + ", " + coordinates[0] + "§7.");
+            message.setClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, "https://maps.google.com/maps?t=k&q=loc:" + coordinates[1] + "+" + coordinates[0]));
+            message.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new ComponentBuilder("§7Click here to view in Google Maps.").create()));
         } catch (OutOfProjectionBoundsException e) {
-            e.printStackTrace();
+            message.addExtra(ChatColor.RED + "You are currently outside of the world's projection and your location in the Minecraft world has no equivalent on Earth.");
         }
-        TextComponent message = new TextComponent(Terraplusminus.config.getString("prefix") + "§7Your coordinates are:");
-        message.addExtra("\n§8" + coordinates[1] + ", " + coordinates[0] + "§7.");
-        message.setClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, "https://maps.google.com/maps?t=k&q=loc:" + coordinates[1] + "+" + coordinates[0]));
-        message.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new ComponentBuilder("§7Click here to view in Google Maps.").create()));
         player.spigot().sendMessage(message);
     }
 }
