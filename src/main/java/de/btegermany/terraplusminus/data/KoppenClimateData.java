@@ -3,10 +3,13 @@ package de.btegermany.terraplusminus.data;
 import net.buildtheearth.terraminusminus.dataset.builtin.AbstractBuiltinDataset;
 import net.buildtheearth.terraminusminus.util.RLEByteArray;
 import net.daporkchop.lib.common.reference.cache.Cached;
-import org.tukaani.xz.LZMAInputStream;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.function.Supplier;
+import java.util.zip.GZIPInputStream;
+
+import static net.daporkchop.lib.common.util.PValidation.checkState;
 
 public class KoppenClimateData extends AbstractBuiltinDataset {
     protected static final int COLUMNS = 43200;
@@ -20,22 +23,18 @@ public class KoppenClimateData extends AbstractBuiltinDataset {
     private static final Cached<RLEByteArray> CACHE = Cached.global((Supplier<RLEByteArray>) () -> {
         RLEByteArray.Builder builder = RLEByteArray.builder();
 
-        try (LZMAInputStream is = new LZMAInputStream(KoppenClimateData.class.getResourceAsStream("/koppen_map.lzma"))) {
-
+        try (InputStream compressedStream = KoppenClimateData.class.getResourceAsStream("/koppen_map.gz")) {
+            checkState(compressedStream != null, "Missing internal resource for Koppen biome dataset");
+            InputStream is = new GZIPInputStream(compressedStream);
             byte[] buffer = new byte[4096];
-            int readyBytes = 0;
-            while (true) {
-                try {
-                    if ((readyBytes = is.read(buffer, 0, 4096)) == -1) break;
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+            int readyBytes;
+            while ((readyBytes = is.read(buffer, 0, buffer.length)) != -1) {
                 for (int i = 0; i < readyBytes; i++) {
                     builder.append(buffer[i]);
                 }
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            throw new RuntimeException("Failed to load internal resource for Koppen dataset", e);
         }
 
         return builder.build();
