@@ -69,35 +69,43 @@ public class TreePopulator extends BlockPopulator {
 
         // Load Trees from customTrees.json
         JsonObject treeTypes = getJSONObject();
-        final int[] treeCount = {0};
-        treeTypes.entrySet().forEach(treeSizes -> {
+        final TreeLoadingStatistics stats = new TreeLoadingStatistics();
+        treeTypes.entrySet().forEach(treeTypeEntry -> {
+            final String treeType = treeTypeEntry.getKey();
+            final JsonObject treeSizeVariants = treeTypeEntry.getValue().getAsJsonObject();
+            stats.familyCount++;
+            Terraplusminus.instance.getComponentLogger().debug("Loading tree family {} with {} size variants", treeType, treeSizeVariants.size());
 
-            trees.put(treeSizes.getKey(), new ArrayList<>());
+            this.trees.put(treeType, new ArrayList<>());
 
-            Terraplusminus.instance.getComponentLogger().info("Loading Tree Type {}", treeSizes.getKey());
+            treeSizeVariants.entrySet().forEach(variantEntry -> {
+                final String sizeName = variantEntry.getKey();  // s, m, l, ...
+                final JsonObject treeVariants = variantEntry.getValue().getAsJsonObject();
+                Terraplusminus.instance.getComponentLogger().trace("Loading trees of family {} and size {} with {} variants", treeType, sizeName, treeVariants.size());
 
-            treeSizes.getValue().getAsJsonObject().entrySet().forEach(treeNames -> {
+                treeVariants.entrySet().forEach(treeEntry -> {
+                    final String treeName = treeEntry.getKey();
+                    final JsonObject treeConfig = treeEntry.getValue().getAsJsonObject();
+                    Terraplusminus.instance.getComponentLogger().trace("Loading tree variant {} of size {} and family {}", treeName, sizeName, treeType);
 
-                treeNames.getValue().getAsJsonObject().entrySet().forEach(tree -> {
-
-                    treeCount[0]++;
+                    stats.totalVariantCount++;
                     ArrayList<TreeBlock> treeBlocks = new ArrayList<>();
 
-                    tree.getValue().getAsJsonObject().get("blocks").getAsJsonArray().forEach(treeBlockElement -> {
+                    treeConfig.get("blocks").getAsJsonArray().forEach(treeBlockElement -> {
 
                         JsonObject treeBlock = treeBlockElement.getAsJsonObject();
                         treeBlocks.add(new TreeBlock(treeBlock.get("x").getAsInt(), treeBlock.get("y").getAsInt(), treeBlock.get("z").getAsInt(), Material.getMaterial(treeBlock.get("material").getAsString())));
 
                     });
 
-                    trees.get(treeSizes.getKey()).add(treeBlocks);
+                    trees.get(treeTypeEntry.getKey()).add(treeBlocks);
 
                 });
 
             });
 
         });
-        Terraplusminus.instance.getComponentLogger().info("Finished loading {} custom trees", treeCount[0]);
+        Terraplusminus.instance.getComponentLogger().info("Loaded {} custom trees from {} families", stats.totalVariantCount, stats.familyCount);
 
     }
 
@@ -227,6 +235,11 @@ public class TreePopulator extends BlockPopulator {
         JsonElement jsonElement = parser.parse(reader);
         JsonObject jsonObject = jsonElement.getAsJsonObject();
         return jsonObject.get("trees").getAsJsonObject();
+    }
+
+    private static class TreeLoadingStatistics {
+        int familyCount = 0;
+        int totalVariantCount = 0;
     }
 
 }
