@@ -286,7 +286,6 @@ public final class Terraplusminus extends JavaPlugin implements Listener {
     }
 
     // This method has to rely on the unstable paper API as we use paper-plugin.yml, which itself is experimental
-    @SuppressWarnings("UnstableApiUsage")
     private String createHttpUserAgent() {
         PluginMeta metadata = this.getPluginMeta();
         return format(Locale.ENGLISH, "%s/%s (%s/%s; +%s)",
