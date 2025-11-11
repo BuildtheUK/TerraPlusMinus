@@ -4,7 +4,11 @@ import org.bukkit.plugin.Plugin;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.*;
+import java.nio.file.Path;
 import java.util.function.Function;
+
+import static java.nio.file.Files.move;
+import static java.nio.file.StandardCopyOption.ATOMIC_MOVE;
 
 
 public class PluginConfigManipulator {
@@ -42,11 +46,11 @@ public class PluginConfigManipulator {
     }
 
     private void transformLinesContaining(String needle, Function<@NotNull String, @NotNull String[]> transformer) {
-        File inputFile = new File(this.plugin.getDataFolder() + File.separator + "config.yml");
-        File tempFile = new File(this.plugin.getDataFolder() + File.separator + "temp.yml");
+        Path inputFile = this.plugin.getDataPath().resolve("config.yml");
+        Path tempFile = this.plugin.getDataPath().resolve("temp.yml");
         try (
-                BufferedReader reader = new BufferedReader(new FileReader(inputFile));
-                BufferedWriter writer = new BufferedWriter(new FileWriter(tempFile))
+                BufferedReader reader = new BufferedReader(new FileReader(inputFile.toFile()));
+                BufferedWriter writer = new BufferedWriter(new FileWriter(tempFile.toFile()))
         ) {
 
             String currentLine;
@@ -61,11 +65,7 @@ public class PluginConfigManipulator {
                 }
             }
 
-            boolean deleted = inputFile.delete();
-            boolean renamed = tempFile.renameTo(inputFile);
-            if (!deleted || !renamed) {
-                this.plugin.getComponentLogger().warn("Failed to swap temporary file with config");
-            }
+            move(tempFile, inputFile, ATOMIC_MOVE);
         } catch (IOException e) {
             this.plugin.getComponentLogger().error("Failed to transform config file {} with needle '{}'", inputFile, needle, e);
         }
