@@ -9,7 +9,7 @@ import de.btegermany.terraplusminus.events.PlayerMoveEvent;
 import de.btegermany.terraplusminus.events.PluginMessageEvent;
 import de.btegermany.terraplusminus.gen.RealWorldGenerator;
 import de.btegermany.terraplusminus.utils.ConfigurationHelper;
-import de.btegermany.terraplusminus.utils.FileBuilder;
+import de.btegermany.terraplusminus.utils.PluginConfigManipulator;
 import de.btegermany.terraplusminus.utils.LinkedWorld;
 import de.btegermany.terraplusminus.utils.PlayerHashMapManagement;
 import io.papermc.paper.command.brigadier.Commands;
@@ -21,6 +21,7 @@ import net.buildtheearth.terraminusminus.TerraConstants;
 import net.buildtheearth.terraminusminus.util.http.Disk;
 import net.buildtheearth.terraminusminus.util.http.Http;
 import org.bukkit.Bukkit;
+import org.bukkit.World;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.serialization.ConfigurationSerializable;
 import org.bukkit.configuration.serialization.ConfigurationSerialization;
@@ -29,17 +30,15 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.world.WorldInitEvent;
 import org.bukkit.generator.ChunkGenerator;
 import org.bukkit.plugin.Plugin;
-import org.bukkit.plugin.PluginDescriptionFile;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.*;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Locale;
-import java.util.logging.Level;
 
 import static java.lang.String.format;
-import static java.util.logging.Level.WARNING;
 import static net.daporkchop.lib.common.util.PValidation.checkState;
 
 public final class Terraplusminus extends JavaPlugin implements Listener {
@@ -49,16 +48,6 @@ public final class Terraplusminus extends JavaPlugin implements Listener {
     @Override
     public void onEnable() {
         instance = this;
-        PluginDescriptionFile pdf = this.getDescription();
-        String pluginVersion = pdf.getVersion();
-
-        getLogger().log(Level.INFO, "\n╭━━━━╮\n" +
-                "┃╭╮╭╮┃\n" +
-                "╰╯┃┃┣┻━┳━┳━┳━━╮╭╮\n" +
-                "╱╱┃┃┃┃━┫╭┫╭┫╭╮┣╯╰┳━━╮\n" +
-                "╱╱┃┃┃┃━┫┃┃┃┃╭╮┣╮╭┻━━╯\n" +
-                "╱╱╰╯╰━━┻╯╰╯╰╯╰╯╰╯\n" +
-                "Version: " + pluginVersion);
 
         // Config ------------------]
         ConfigurationSerialization.registerClass(ConfigurationSerializable.class);
@@ -93,7 +82,10 @@ public final class Terraplusminus extends JavaPlugin implements Listener {
 
         registerCommands();
 
-        Bukkit.getLogger().log(Level.INFO, "[T+-] Terraplusminus successfully enabled");
+        this.getComponentLogger().info(
+                "Terraplusminus successfully enabled ({} v{}, {} v{})",
+                this.getName(), this.getVersion(), TerraConstants.LIB_NAME, TerraConstants.LIB_VERSION
+        );
     }
 
     @Override
@@ -103,19 +95,18 @@ public final class Terraplusminus extends JavaPlugin implements Listener {
         this.getServer().getMessenger().unregisterIncomingPluginChannel(this);
         // --------------------------
 
-        Bukkit.getLogger().log(Level.INFO, "[T+-] Plugin deactivated");
+        this.getComponentLogger().info("Plugin deactivated");
     }
 
     @EventHandler
     public void onWorldInit(WorldInitEvent event) {
-        String datapackName = "world-height-datapack.zip";
-        File datapackPath = new File(event.getWorld().getWorldFolder() + File.separator + "datapacks" + File.separator + datapackName);
-        if (Terraplusminus.config.getBoolean("height_datapack")) {
-            if (!event.getWorld().getName().contains("_nether") && !event.getWorld().getName().contains("_the_end")) { //event.getWorld().getGenerator() is null here
-                if (!datapackPath.exists()) {
-                    copyFileFromResource(datapackName, datapackPath);
-                }
-            }
+        World world = event.getWorld();
+        boolean shouldInstallHeightDatapack = Terraplusminus.config.getBoolean("height_datapack");
+        boolean isDefaultWorld = Bukkit.getWorlds().getFirst().getUID().equals(world.getUID());
+        if (shouldInstallHeightDatapack && isDefaultWorld) {
+            // Datapacks should be installed in the default world and will apply to all of them.
+            // Getting the default world this way is reliable according to https://www.spigotmc.org/threads/ask-getting-the-servers-main-world.349626/#post-3238378
+            this.enforceDatapackInstallation("world-height-datapack.zip", world);
         }
     }
 
@@ -137,132 +128,158 @@ public final class Terraplusminus extends JavaPlugin implements Listener {
     }
 
 
-    public void copyFileFromResource(String resourcePath, File destination) {
-        InputStream in = getResource(resourcePath);
-        OutputStream out;
-        try {
-            out = new FileOutputStream(destination);
-        } catch (FileNotFoundException e) {
-            Bukkit.getLogger().log(Level.SEVERE, "[T+-] " + destination.getName() + " not found");
-            throw new RuntimeException(e);
+    public void enforceDatapackInstallation(String datapackResourcePath, World world) {
+        String datapackName = Path.of(datapackResourcePath).getFileName().toString();
+        File droppedFile = world
+                .getWorldFolder().toPath()
+                .resolve("datapacks")
+                .resolve(datapackName)
+                .toFile();
+        if (droppedFile.exists()) {
+            this.getComponentLogger().debug("Datapack {} was already installed in world {}", datapackName, world.getName());
+            return;
         }
-        byte[] buf = new byte[1024];
-        int len;
-        try {
-            while ((len = in.read(buf)) > 0) {
-                out.write(buf, 0, len);
-            }
+        try(InputStream in = this.getResource(datapackResourcePath); OutputStream out = new FileOutputStream(droppedFile)) {
+            checkState(in != null, "Missing internal resource: %s", datapackResourcePath);
+            in.transferTo(out);
         } catch (IOException io) {
-            Bukkit.getLogger().log(Level.SEVERE, "[T+-] Could not copy " + destination);
-        } finally {
-            try {
-                out.close();
-                if (resourcePath.equals("world-height-datapack.zip")) {
-                    Bukkit.getLogger().log(Level.CONFIG, "[T+-] Copied datapack to world folder");
-                    Bukkit.getLogger().log(Level.SEVERE, "[T+-] Stopping server to start again with datapack");
-                    Bukkit.getServer().shutdown();
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            this.getComponentLogger().error(
+                    "Failed to extract datapack from resource '{}' to '{}'",
+                    datapackResourcePath, droppedFile.getAbsolutePath()
+            );
+            throw new RuntimeException(io);
         }
+        this.getComponentLogger().error(
+                "Datapack {} was missing from world {} and has been automatically installed by Terraplusminus. The server needs to be manually restarted for the change to take effect. Terraplusminus will now shutdown the server so it can be restarted.",
+                datapackName, world.getName()
+        );
+        Bukkit.getServer().shutdown();
     }
 
     private void updateConfig() {
-        FileBuilder fileBuilder = new FileBuilder(this);
+        PluginConfigManipulator manipulator = new PluginConfigManipulator(this);
 
-        Double configVersion = null;
-        try {
-            configVersion = this.config.getDouble("config_version");
-        } catch (Exception e) {
-            e.printStackTrace();
-            Bukkit.getLogger().log(Level.SEVERE, "[T+-] Old config detected. Please delete and restart/reload.");
+        double configVersion = Terraplusminus.config.getDouble("config_version");
+
+        if (configVersion == 0.0) {  // That's the default value if the field was not set at all in the YAML
+            this.getComponentLogger().error("Old config detected. Please delete and restart/reload.");
         }
         if (configVersion == 1.0) {
             String passthroughTpll = Terraplusminus.config.getString("passthrough_tpll");
             if (passthroughTpll == null) {
                 passthroughTpll = "";
             }
-            int y = (int) this.config.getDouble("terrain_offset");
-            this.config.set("terrain_offset.x", 0);
-            this.config.set("terrain_offset.y", y);
-            this.config.set("terrain_offset.z", 0);
-            this.config.set("config_version", 1.1);
+            int y = (int) Terraplusminus.config.getDouble("terrain_offset");
+            Terraplusminus.config.set("terrain_offset.x", 0);
+            Terraplusminus.config.set("terrain_offset.y", y);
+            Terraplusminus.config.set("terrain_offset.z", 0);
+            Terraplusminus.config.set("config_version", 1.1);
             this.saveConfig();
-            FileBuilder.addLineAbove("terrain_offset", "\n" +
-                    "# Generation -------------------------------------------\n" +
-                    "# Offset your section which fits into the world.");
-            FileBuilder.deleteLine("# Passthrough tpll");
-            FileBuilder.deleteLine("passthrough_tpll");
-            FileBuilder.addLineAbove("# Generation", "# Passthrough tpll to other bukkit plugins. It will not passthrough when it's empty. Type in the name of your plugin. E.g. Your plugin name is vanillatpll you set passthrough_tpll: 'vanillatpll'\n" +
-                    "passthrough_tpll: '" + passthroughTpll + "'\n\n\n"); //Fixes empty config entry from passthrough_tpll
+            manipulator.addLineAbove(
+                    "terrain_offset",
+                    """
+                    
+                    # Generation -------------------------------------------
+                    # Offset your section which fits into the world."""
+            );
+            manipulator.deleteLine("# Passthrough tpll");
+            manipulator.deleteLine("passthrough_tpll");
+            manipulator.addLineAbove(
+                    "# Generation",
+                    """
+                    # Passthrough tpll to other bukkit plugins. It will not passthrough when it's empty. Type in the name of your plugin. E.g. Your plugin name is vanillatpll you set passthrough_tpll: 'vanillatpll'
+                    passthrough_tpll: 'PASSTHROUGH_TPLL'
+                    
+                    
+                    """.replace("PASSTHROUGH_TPLL", passthroughTpll)); //Fixes empty config entry from passthrough_tpll
 
         }
         if (configVersion == 1.1) {
-            this.config.set("config_version", 1.2);
+            Terraplusminus.config.set("config_version", 1.2);
             this.saveConfig();
-            FileBuilder.addLineAbove("# If disabled, tree generation is turned off.", "" +
-                    "# Linked servers ---------------------------------------\n" +
-                    "# If the height limit on this server is not enough, other servers can be linked to generate higher or lower sections.\n" +
-                    "linked_servers:\n" +
-                    "  enabled: false\n" +
-                    "  servers:\n" +
-                    "    - another_server                 # e.g. this server has a datapack to extend height to 2032. it covers the height section (-2032) - (-1) m a.s.l. it has a y-offset of -2032.\n" +
-                    "    - current_server                 # e.g. this server has a datapack to extend height to 2032. it covers the height section 0 - 2032 m a.s.l.\n" +
-                    "    - another_server                 # e.g. this server has a datapack to extend height to 2032. it covers the height section 2033 - 4064 m a.s.l. it has a y-offset of 2032\n");
+            manipulator.addLineAbove(
+                    "# If disabled, tree generation is turned off.",
+                    """
+                    # Linked servers ---------------------------------------
+                    # If the height limit on this server is not enough, other servers can be linked to generate higher or lower sections.
+                    linked_servers:
+                      enabled: false
+                      servers:
+                        - another_server                 # e.g. this server has a datapack to extend height to 2032. it covers the height section (-2032) - (-1) m a.s.l. it has a y-offset of -2032.
+                        - current_server                 # e.g. this server has a datapack to extend height to 2032. it covers the height section 0 - 2032 m a.s.l.
+                        - another_server                 # e.g. this server has a datapack to extend height to 2032. it covers the height section 2033 - 4064 m a.s.l. it has a y-offset of 2032
+                    """
+            );
         }
         if (configVersion == 1.2) {
-            this.config.set("config_version", 1.3);
+            Terraplusminus.config.set("config_version", 1.3);
             this.saveConfig();
-            FileBuilder.deleteLine("# Linked servers -------------------------------------");
-            FileBuilder.deleteLine("# If the height limit on this server is not enough, other servers can be linked to generate higher or lower sections");
-            FileBuilder.deleteLine("linked_servers:");
-            FileBuilder.deleteLine("  enabled: false");
-            FileBuilder.deleteLine("  servers:");
-            FileBuilder.deleteLine("- another_server");
-            FileBuilder.deleteLine("- current_server");
-            FileBuilder.addLineAbove("# If disabled, tree generation is turned off.", "" +
-                    "# Linked worlds ---------------------------------------\n" +
-                    "# If the height limit in this world/server is not enough, other worlds/servers can be linked to generate higher or lower sections\n" +
-                    "linked_worlds:\n" +
-                    "  enabled: false\n" +
-                    "  method: 'SERVER'                         # 'SERVER' or 'MULTIVERSE'\n" +
-                    "  # if method = MULTIVERSE -> world_name, y-offset\n" +
-                    "  worlds:\n" +
-                    "    - another_world/server                 # e.g. this world/server has a datapack to extend height to 2032. it covers the height section (-2032) - (-1) m a.s.l. it has a y-offset of -2032.\n" +
-                    "    - current_world/server                 # do not change! e.g. this world/server has a datapack to extend height to 2032. it covers the height section 0 - 2032 m a.s.l.\n" +
-                    "    - another_world/server                 # e.g. this world/server has a datapack to extend height to 2032. it covers the height section 2033 - 4064 m a.s.l. it has a y-offset of 2032\n\n");
+            manipulator.deleteLine("# Linked servers -------------------------------------");
+            manipulator.deleteLine("# If the height limit on this server is not enough, other servers can be linked to generate higher or lower sections");
+            manipulator.deleteLine("linked_servers:");
+            manipulator.deleteLine("  enabled: false");
+            manipulator.deleteLine("  servers:");
+            manipulator.deleteLine("- another_server");
+            manipulator.deleteLine("- current_server");
+            manipulator.addLineAbove(
+                    "# If disabled, tree generation is turned off.",
+                    """
+                    # Linked worlds ---------------------------------------
+                    # If the height limit in this world/server is not enough, other worlds/servers can be linked to generate higher or lower sections
+                    linked_worlds:
+                      enabled: false
+                      method: 'SERVER'                         # 'SERVER' or 'MULTIVERSE'
+                      # if method = MULTIVERSE -> world_name, y-offset
+                      worlds:
+                        - another_world/server                 # e.g. this world/server has a datapack to extend height to 2032. it covers the height section (-2032) - (-1) m a.s.l. it has a y-offset of -2032.
+                        - current_world/server                 # do not change! e.g. this world/server has a datapack to extend height to 2032. it covers the height section 0 - 2032 m a.s.l.
+                        - another_world/server                 # e.g. this world/server has a datapack to extend height to 2032. it covers the height section 2033 - 4064 m a.s.l. it has a y-offset of 2032
+                    """
+            );
         }
         if (configVersion == 1.3) {
-            this.config.set("config_version", 1.4);
+            Terraplusminus.config.set("config_version", 1.4);
             this.saveConfig();
-            FileBuilder.addLineAfter("prefix:",
-                    "\n# If disabled, the plugin will log every fetched data to the console\n" +
-                            "reduced_console_messages: true");
-            FileBuilder.deleteLine("- another_world/server");
-            FileBuilder.deleteLine("- current_world/server");
-            FileBuilder.addLineAbove("# If disabled, tree generation is turned off.",
-                    "    - name: another_world/server          # e.g. this world/server has a datapack to extend height to 2032. it covers the height section (-2032) - (-1) m a.s.l. it has a y-offset of -2032.\n" +
-                            "      offset: 2032\n" +
-                            "    - name: current_world/server                 # e.g. this world/server has a datapack to extend height to 2032. it covers the height section 0 - 2032 m a.s.l.\n" +
-                            "      offset: 0\n" +
-                            "    - name: another_world/server                 # e.g. this world/server has a datapack to extend height to 2032. it covers the height section 2033 - 4064 m a.s.l. it has a y-offset of 2032\n" +
-                            "      offset: -2032\n\n");
+            manipulator.addLineBelow(
+                    "prefix:",
+                    """
+                    
+                    # If disabled, the plugin will log every fetched data to the console
+                    reduced_console_messages: true"""
+            );
+            manipulator.deleteLine("- another_world/server");
+            manipulator.deleteLine("- current_world/server");
+            manipulator.addLineAbove(
+                    "# If disabled, tree generation is turned off.",
+                        """
+                        - name: another_world/server          # e.g. this world/server has a datapack to extend height to 2032. it covers the height section (-2032) - (-1) m a.s.l. it has a y-offset of -2032.
+                          offset: 2032
+                        - name: current_world/server                 # e.g. this world/server has a datapack to extend height to 2032. it covers the height section 0 - 2032 m a.s.l.
+                          offset: 0
+                        - name: another_world/server                 # e.g. this world/server has a datapack to extend height to 2032. it covers the height section 2033 - 4064 m a.s.l. it has a y-offset of 2032
+                          offset: -2032
+                    
+                    """);
         }
         if (configVersion == 1.4) {
-            this.config.set("config_version", 1.5);
+            Terraplusminus.config.set("config_version", 1.5);
             this.saveConfig();
             boolean differentBiomes = Terraplusminus.config.getBoolean("different_biomes");
-            FileBuilder.deleteLine("# The biomes will be generated with https://en.wikipedia.org/wiki/K%C3%B6ppen_climate_classification.");
-            FileBuilder.deleteLine("# If turned off, everything will be plains biome.");
-            FileBuilder.deleteLine("different_biomes:");
-            FileBuilder.addLineAbove("# Customize the material, the blocks will be generated with.",
-                    "biomes:\n" +
-                    "  # If 'use_dataset' is enabled, biomes will be generated based on: https://en.wikipedia.org/wiki/K%C3%B6ppen_climate_classification.\n" +
-                    "  use_dataset: " + differentBiomes + "\n" +
-                    "  # If 'use_dataset' is disabled, this biome will be used everywhere instead (if 'generate_trees' is also enabled -> oak and birch).\n" +
-                    "  # Possible values found in \"Resource location\" on: https://minecraft.wiki/w/Biome#Biome_IDs (use with namespace e.g. minecraft:plains)\n" +
-                    "  biome: minecraft:plains\n\n");
+            manipulator.deleteLine("# The biomes will be generated with https://en.wikipedia.org/wiki/K%C3%B6ppen_climate_classification.");
+            manipulator.deleteLine("# If turned off, everything will be plains biome.");
+            manipulator.deleteLine("different_biomes:");
+            manipulator.addLineAbove(
+                    "# Customize the material, the blocks will be generated with.",
+                    """
+                    biomes:
+                      # If 'use_dataset' is enabled, biomes will be generated based on: https://en.wikipedia.org/wiki/K%C3%B6ppen_climate_classification.
+                      use_dataset: USE_DATASET
+                      # If 'use_dataset' is disabled, this biome will be used everywhere instead (if 'generate_trees' is also enabled -> oak and birch).
+                      # Possible values found in "Resource location" on: https://minecraft.wiki/w/Biome#Biome_IDs (use with namespace e.g. minecraft:plains)
+                      biome: minecraft:plains
+                    
+                    """.replace("USE_DATASET", "" + differentBiomes)
+            );
         }
     }
 
@@ -281,8 +298,14 @@ public final class Terraplusminus extends JavaPlugin implements Listener {
         Disk.setCacheRoot(this.getDataPath().resolve("cache").toFile());
 
         String userAgent = this.createHttpUserAgent();
-        this.getLogger().fine("Terraplusminus HTTP user agent: " + userAgent);
+        this.getComponentLogger().debug("Terraplusminus HTTP user agent: {}", userAgent);
         Http.userAgent(userAgent);
+    }
+
+    // The old way is deprecated and the new one is experimental, let's go with the new one
+    private String getVersion() {
+        PluginMeta meta = this.getPluginMeta();
+        return meta.getVersion();
     }
 
     // This method has to rely on the unstable paper API as we use paper-plugin.yml, which itself is experimental
@@ -300,19 +323,19 @@ public final class Terraplusminus extends JavaPlugin implements Listener {
     private void extractTerraConfigFileToPluginDir(@NotNull String resourcePath, @NotNull String dropPath) {
         File droppedFile = this.getDataPath().resolve(dropPath).toFile();
         if (droppedFile.exists()) {
-            this.getLogger().fine("Terra-- config file " + droppedFile.getAbsolutePath() + " is already present in plugin directory");
+            this.getComponentLogger().debug("Terra-- config file {} is already present in plugin directory", droppedFile.getAbsolutePath());
             return;
         }
         if(droppedFile.getParentFile().mkdirs()) {
-            this.getLogger().fine("Created parent directory before extracting Terra-- configuration to: " + droppedFile.getAbsolutePath());
+            this.getComponentLogger().trace("Created parent directory before extracting Terra-- configuration to: {}", droppedFile.getAbsolutePath());
         }
         try (InputStream resourceStream = this.getClass().getResourceAsStream(resourcePath); OutputStream fileStream = new FileOutputStream(droppedFile)) {
             checkState(resourceStream != null, "Missing internal resource: %s", resourcePath);
             resourceStream.transferTo(fileStream);
         } catch (IOException e) {
-            this.getLogger().log(WARNING, "Failed to drop a Terra configuration file in plugin directory", e);
+            this.getComponentLogger().warn("Failed to drop a Terra configuration file in plugin directory", e);
         }
-        this.getLogger().info("Created default Terra-- configuration at " + droppedFile.getAbsolutePath());
+        this.getComponentLogger().info("Created default Terra-- configuration at {}", droppedFile.getAbsolutePath());
     }
 
 }

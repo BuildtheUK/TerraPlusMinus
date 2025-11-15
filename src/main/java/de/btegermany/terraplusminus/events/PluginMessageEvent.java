@@ -1,5 +1,6 @@
 package de.btegermany.terraplusminus.events;
 
+import de.btegermany.terraplusminus.Terraplusminus;
 import de.btegermany.terraplusminus.utils.PlayerHashMapManagement;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -10,6 +11,7 @@ import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.util.UUID;
+
 
 public class PluginMessageEvent implements PluginMessageListener {
 
@@ -35,7 +37,7 @@ public class PluginMessageEvent implements PluginMessageListener {
                     targetPlayer.chat("/tpll " + coordinates);
                 }
             } catch (IOException e) {
-                e.printStackTrace();
+                Terraplusminus.instance.getComponentLogger().warn("Failed to read plugin message", e);
             }
         }
     }

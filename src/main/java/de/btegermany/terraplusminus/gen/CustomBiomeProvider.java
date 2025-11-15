@@ -17,6 +17,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
+
 public class CustomBiomeProvider extends BiomeProvider {
 
     private final KoppenClimateData climateData = new KoppenClimateData();
@@ -45,9 +46,16 @@ public class CustomBiomeProvider extends BiomeProvider {
             try {
                 biomeData = this.climateData.getAsync(coords[0], coords[1]).get();
                 return koppenDataToBukkitBiome(biomeData);
-            } catch (InterruptedException | ExecutionException | OutOfProjectionBoundsException e) {
-                e.printStackTrace();
-
+            } catch (OutOfProjectionBoundsException silenced) {
+                // This is not an issue,
+                // we can't be expected to supply a realistic biome for a place that does not exist on Earth
+            } catch (InterruptedException | ExecutionException e) {
+                Terraplusminus.instance.getComponentLogger().warn(
+                        "Exception when generating biome at position {}/{}/{} in world {}",
+                        x, y, z,
+                        worldInfo.getName(),
+                        e
+                );
             }
         } else biomeData = 8; // Default is plains for tree generation
         return parseDefaultBiome();
