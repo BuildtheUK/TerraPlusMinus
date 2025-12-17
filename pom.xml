@@ -64,6 +64,10 @@
                     </filters>
                     <relocations>
                         <relocation>
+                            <pattern>org.bstats</pattern>
+                            <shadedPattern>de.btegermany.terraplusminus.bstats</shadedPattern>
+                        </relocation>
+                        <relocation>
                             <pattern>io.papermc.paperlib</pattern>
                             <shadedPattern>de.btegermany.terraplusminus.paperlib</shadedPattern>
                         </relocation>
@@ -180,6 +184,12 @@
             <artifactId>ProtocolLib</artifactId>
             <version>5.4.0</version>
             <scope>provided</scope>
+        </dependency>
+        <dependency> <!-- https://central.sonatype.com/artifact/org.bstats/bstats-bukkit -->
+            <groupId>org.bstats</groupId>
+            <artifactId>bstats-bukkit</artifactId>
+            <version>3.1.0</version>
+            <scope>compile</scope>
         </dependency>
     </dependencies>
 </project>
