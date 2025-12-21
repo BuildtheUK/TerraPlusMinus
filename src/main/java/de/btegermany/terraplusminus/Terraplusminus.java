@@ -20,6 +20,7 @@ import net.buildtheearth.terraminusminus.TerraConfig;
 import net.buildtheearth.terraminusminus.TerraConstants;
 import net.buildtheearth.terraminusminus.util.http.Disk;
 import net.buildtheearth.terraminusminus.util.http.Http;
+import org.bstats.bukkit.Metrics;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -47,6 +48,7 @@ public final class Terraplusminus extends JavaPlugin implements Listener {
 
     @Override
     public void onEnable() {
+        new Metrics(this, 28392); // https://bstats.org/plugin/bukkit/Terraplusminus/28392
         instance = this;
 
         // Config ------------------]
