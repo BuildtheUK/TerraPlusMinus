@@ -2,6 +2,7 @@
 
 # TerraPlusMinus
 [![Build Terra+-](https://github.com/Build-the-Earth-Germany/terraplusminus/actions/workflows/maven.yml/badge.svg)](https://github.com/Build-the-Earth-Germany/terraplusminus/actions/workflows/maven.yml)
+[![Quality Gate Status](https://sonarqube.app.k8s.bteger.dev/api/project_badges/measure?project=BTE-Germany_TerraPlusMinus_776220d7-94a3-47ab-a1af-0f299952ab48&metric=alert_status&token=sqb_697251798da319e35b695e4fd1da188ff4e3336b)](https://sonarqube.app.k8s.bteger.dev/dashboard?id=BTE-Germany_TerraPlusMinus_776220d7-94a3-47ab-a1af-0f299952ab48)
 [![GitHub license](https://badgen.net/github/license/Build-the-Earth-Germany/terraplusminus)](https://github.com/Build-the-Earth-Germany/terraplusminus/blob/master/LICENSE)
 ![Latest Release](https://img.shields.io/github/v/release/BTE-Germany/TerraPlusMinus)
 [![Discord](https://img.shields.io/discord/692825222373703772.svg?label=&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2)](https://discord.gg/GkSxGTYaAJ)
