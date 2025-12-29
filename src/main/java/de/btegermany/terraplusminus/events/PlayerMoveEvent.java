@@ -3,6 +3,7 @@ package de.btegermany.terraplusminus.events;
 import de.btegermany.terraplusminus.Terraplusminus;
 import de.btegermany.terraplusminus.utils.ConfigurationHelper;
 import de.btegermany.terraplusminus.utils.LinkedWorld;
+import lombok.NonNull;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
@@ -19,10 +20,13 @@ import org.jetbrains.annotations.NotNull;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 
 public class PlayerMoveEvent implements Listener {
     final int yOffsetConfigEntry;
+
     private final int xOffset;
     private final int zOffset;
     private final boolean linkedWorldsEnabled;
@@ -30,6 +34,8 @@ public class PlayerMoveEvent implements Listener {
     private final String linkedWorldsMethod;
     private final Plugin plugin;
     private final HashMap<String, Integer> worldHashMap;
+    private static final long TELEPORT_COOLDOWN_MS = 5000; // 5 seconds
+    private final ConcurrentHashMap<UUID, Long> teleportCooldowns = new ConcurrentHashMap<>();
 
     public PlayerMoveEvent(Plugin plugin) {
         this.plugin = plugin;
@@ -79,6 +85,12 @@ public class PlayerMoveEvent implements Listener {
         }
 
         Player p = event.getPlayer();
+
+        // Prevent repeated scheduling while on cooldown
+        if (isOnTeleportCooldown(p)) {
+            return;
+        }
+
         World world = p.getWorld();
         Location location = p.getLocation();
 
@@ -86,27 +98,50 @@ public class PlayerMoveEvent implements Listener {
         new BukkitRunnable() {
             @Override
             public void run() {
+                // Prevent repeated scheduling while on cooldown
+                if (isOnTeleportCooldown(p)) {
+                    return;
+                }
                 // Teleport player from world to world
-                if (p.getLocation().getY() < 0) {
+                if (p.getLocation().getY() < world.getMinHeight()) {
                     LinkedWorld previousServer = ConfigurationHelper.getPreviousServerName(world.getName());
                     if (previousServer != null) {
-                        teleportPlayer(previousServer, location, p);
+                        teleportPlayer(previousServer, location, p, true);
                     }
                 } else if (p.getLocation().getY() > world.getMaxHeight()) {
                     LinkedWorld nextServer = ConfigurationHelper.getNextServerName(world.getName());
                     if (nextServer != null) {
-                        teleportPlayer(nextServer, location, p);
+                        teleportPlayer(nextServer, location, p, false);
                     }
                 }
             }
         }.runTaskLater(plugin, 60L);
     }
 
-    private void teleportPlayer(@NotNull LinkedWorld linkedWorld, @NotNull Location location, @NotNull Player p) {
+    private void teleportPlayer(@NotNull LinkedWorld linkedWorld, @NotNull Location location, Player p, boolean maxY) {
+        setTeleportCooldown(p);
+
         World tpWorld = Bukkit.getWorld(linkedWorld.getWorldName());
-        Location newLocation = new Location(tpWorld, location.getX() + xOffset,
-                Objects.requireNonNull(tpWorld).getMinHeight(), location.getZ() + zOffset, location.getYaw(), location.getPitch());
+        int height = maxY ? Objects.requireNonNull(tpWorld).getMaxHeight() : Objects.requireNonNull(tpWorld).getMinHeight();
+        Location newLocation = new Location(tpWorld, location.getX() + xOffset, height, location.getZ() + zOffset, location.getYaw(), location.getPitch());
         p.teleportAsync(newLocation);
+        if (p.getAllowFlight()) p.setFlying(true);
         p.sendMessage(Terraplusminus.config.getString("prefix") + "§7You have been teleported to another world.");
     }
+
+    private boolean isOnTeleportCooldown(@NonNull Player player) {
+        long now = System.currentTimeMillis();
+        Long lastTeleport = teleportCooldowns.get(player.getUniqueId());
+
+        if (lastTeleport == null) {
+            return false;
+        }
+
+        return (now - lastTeleport) < TELEPORT_COOLDOWN_MS;
+    }
+
+    private void setTeleportCooldown(@NonNull Player player) {
+        teleportCooldowns.put(player.getUniqueId(), System.currentTimeMillis());
+    }
+
 }
