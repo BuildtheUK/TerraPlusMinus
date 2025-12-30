@@ -5,6 +5,7 @@ import com.google.common.cache.LoadingCache;
 import de.btegermany.terraplusminus.Terraplusminus;
 import de.btegermany.terraplusminus.gen.tree.TreePopulator;
 import de.btegermany.terraplusminus.utils.ConfigurationHelper;
+import de.btegermany.terraplusminus.utils.Properties;
 import lombok.Getter;
 import net.buildtheearth.terraminusminus.generator.CachedChunkData;
 import net.buildtheearth.terraminusminus.generator.ChunkDataLoader;
@@ -36,18 +37,7 @@ import static java.lang.Math.min;
 import static net.buildtheearth.terraminusminus.substitutes.ChunkPos.blockToCube;
 import static net.buildtheearth.terraminusminus.substitutes.ChunkPos.cubeToMinBlock;
 import static net.buildtheearth.terraminusminus.substitutes.TerraBukkit.toBukkitBlockData;
-import static org.bukkit.Material.BRICKS;
-import static org.bukkit.Material.DIRT;
-import static org.bukkit.Material.DIRT_PATH;
-import static org.bukkit.Material.FARMLAND;
-import static org.bukkit.Material.GRASS_BLOCK;
-import static org.bukkit.Material.GRAY_CONCRETE_POWDER;
-import static org.bukkit.Material.MOSS_BLOCK;
-import static org.bukkit.Material.MYCELIUM;
-import static org.bukkit.Material.SNOW;
-import static org.bukkit.Material.SNOW_BLOCK;
-import static org.bukkit.Material.STONE;
-import static org.bukkit.Material.WATER;
+import static org.bukkit.Material.*;
 import static org.bukkit.block.Biome.*;
 
 public class RealWorldGenerator extends ChunkGenerator {
@@ -73,7 +63,7 @@ public class RealWorldGenerator extends ChunkGenerator {
             SNOW
     );
 
-    public RealWorldGenerator(int yOffset) {
+    public RealWorldGenerator(int yOffset, Terraplusminus plugin) {
 
         Http.configChanged(); // This ensures the T-- default config is loaded regarding the number of concurrent http requests for specific urls.
 
@@ -81,11 +71,11 @@ public class RealWorldGenerator extends ChunkGenerator {
 
         GeographicProjection projection = new OffsetProjectionTransform(
                 settings.projection(),
-                Terraplusminus.config.getInt("terrain_offset.x"),
-                Terraplusminus.config.getInt("terrain_offset.z")
+                plugin.getConfig().getInt(Properties.X_OFFSET),
+                plugin.getConfig().getInt(Properties.Z_OFFSET)
         );
         if (yOffset == 0) {
-            this.yOffset = Terraplusminus.config.getInt("terrain_offset.y");
+            this.yOffset = plugin.getConfig().getInt(Properties.Y_OFFSET);
         } else {
             this.yOffset = yOffset;
         }
@@ -98,11 +88,11 @@ public class RealWorldGenerator extends ChunkGenerator {
                 .softValues()
                 .build(new ChunkDataLoader(this.settings));
 
-        this.surfaceMaterial = ConfigurationHelper.getMaterial(Terraplusminus.config, "surface_material", GRASS_BLOCK);
+        this.surfaceMaterial = ConfigurationHelper.getMaterial(plugin.getConfig(), Properties.SURFACE_MATERIAL, GRASS_BLOCK);
         this.materialMapping = Map.of(
-                "minecraft:bricks", ConfigurationHelper.getMaterial(Terraplusminus.config, "building_outlines_material", BRICKS),
-                "minecraft:gray_concrete", ConfigurationHelper.getMaterial(Terraplusminus.config, "road_material", GRAY_CONCRETE_POWDER),
-                "minecraft:dirt_path", ConfigurationHelper.getMaterial(Terraplusminus.config, "path_material", MOSS_BLOCK)
+                "minecraft:bricks", ConfigurationHelper.getMaterial(plugin.getConfig(), Properties.BUILDING_OUTLINES_MATERIAL, BRICKS),
+                "minecraft:gray_concrete", ConfigurationHelper.getMaterial(plugin.getConfig(), Properties.ROAD_MATERIAL, GRAY_CONCRETE_POWDER),
+                "minecraft:dirt_path", ConfigurationHelper.getMaterial(plugin.getConfig(), Properties.PATH_MATERIAL, MOSS_BLOCK)
         );
 
     }
@@ -231,15 +221,7 @@ public class RealWorldGenerator extends ChunkGenerator {
         }
     }
 
-    public void generateBedrock(@NotNull WorldInfo worldInfo, @NotNull Random random, int x, int z, @NotNull ChunkGenerator.ChunkData chunkData) {
-        // no bedrock, because bedrock bad
-    }
-
-    public void generateCaves(@NotNull WorldInfo worldInfo, @NotNull Random random, int x, int z, @NotNull ChunkGenerator.ChunkData chunkData) {
-        // no caves, because caves scary
-    }
-
-
+    @Override
     public int getBaseHeight(@NotNull WorldInfo worldInfo, @NotNull Random random, int x, int z, @NotNull HeightMap heightMap) {
         int chunkX = blockToCube(x);
         int chunkZ = blockToCube(z);
@@ -256,6 +238,13 @@ public class RealWorldGenerator extends ChunkGenerator {
         }
     }
 
+    public CompletableFuture<CachedChunkData> getBaseHeightAsync(int x, int z) {
+        int chunkX = blockToCube(x);
+        int chunkZ = blockToCube(z);
+        return this.cache.getUnchecked(new ChunkPos(chunkX, chunkZ));
+    }
+
+    @Override
     public boolean canSpawn(@NotNull World world, int x, int z) {
         Block highest = world.getBlockAt(x, world.getHighestBlockYAt(x, z), z);
 
@@ -267,48 +256,17 @@ public class RealWorldGenerator extends ChunkGenerator {
         };
     }
 
+    @Override
     @NotNull
     public List<BlockPopulator> getDefaultPopulators(@NotNull World world) {
         return Collections.singletonList(new TreePopulator(customBiomeProvider, yOffset));
     }
 
+    @Override
     @Nullable
     public Location getFixedSpawnLocation(@NotNull World world, @NotNull Random random) {
         if (spawnLocation == null)
             spawnLocation = new Location(world, 3517417, 58, -5288234);
         return spawnLocation;
-    }
-
-    public boolean shouldGenerateNoise() {
-        return false;
-    }
-
-
-    public boolean shouldGenerateSurface() {
-        return false;
-    }
-
-
-    public boolean shouldGenerateBedrock() {
-        return false;
-    }
-
-
-    public boolean shouldGenerateCaves() {
-        return false;
-    }
-
-
-    public boolean shouldGenerateDecorations() {
-        return false;
-    }
-
-
-    public boolean shouldGenerateMobs() {
-        return false;
-    }
-
-    public boolean shouldGenerateStructures() {
-        return false;
     }
 }
