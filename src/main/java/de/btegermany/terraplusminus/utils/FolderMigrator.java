@@ -28,7 +28,7 @@ public class FolderMigrator {
                 }
             }
             if (!config.toFile().delete()) {
-                logger.warn("Failed to delete terraplusplus/config directory");
+                logger.warn("Failed to delete terraplusplus/config directory. Please merge the files manually.");
             }
         }
 
@@ -45,7 +45,7 @@ public class FolderMigrator {
             if (terraDir.delete()) {
                 logger.info("Deleted old terraplusplus directory");
             } else {
-                logger.warn("Failed to delete terraplusplus directory");
+                logger.warn("Failed to delete terraplusplus directory, wrong files inside?");
             }
         }
     }
@@ -53,30 +53,29 @@ public class FolderMigrator {
     private static boolean migrateDirectory(Path source, Path dest) {
         var logger = Terraplusminus.instance.getComponentLogger();
         try {
-            if (Files.exists(dest))
-                if (!Files.exists(dest)) {
+            if (!Files.exists(dest)) {
+                try {
+                    Files.move(source, dest);
+                    logger.info("Moved {} -> {}", source, dest);
+                    return true;
+                } catch (IOException moveEx) {
+                    logger.warn("Move failed, trying copy for {}", source, moveEx);
                     try {
-                        Files.move(source, dest);
-                        logger.info("Moved {} -> {}", source, dest);
-                        return true;
-                    } catch (IOException moveEx) {
-                        logger.warn("Move failed, trying copy for {}", source, moveEx);
-                        try {
-                            if (Files.isDirectory(source)) {
-                                FileUtils.copyDirectory(source.toFile(), dest.toFile());
-                                FileUtils.deleteDirectory(source.toFile());
-                            } else {
-                                Files.copy(source, dest);
-                                Files.deleteIfExists(source);
-                            }
-                            logger.info("Copied {} -> {} (fallback)", source, dest);
-                            return true;
-                        } catch (IOException copyEx) {
-                            logger.warn("Failed to migrate {}! Migrate manually!", source, copyEx);
-                            return false;
+                        if (Files.isDirectory(source)) {
+                            FileUtils.copyDirectory(source.toFile(), dest.toFile());
+                            FileUtils.deleteDirectory(source.toFile());
+                        } else {
+                            Files.copy(source, dest);
+                            Files.deleteIfExists(source);
                         }
+                        logger.info("Copied {} -> {} (fallback)", source, dest);
+                        return true;
+                    } catch (IOException copyEx) {
+                        logger.warn("Failed to migrate {}! Migrate manually!", source, copyEx);
+                        return false;
                     }
                 }
+            }
 
             // Destination exists: must be a directory to merge
             if (!Files.isDirectory(dest)) {
