@@ -153,12 +153,13 @@ public final class Terraplusminus extends JavaPlugin implements Listener {
                     yOffset = world.getOffset();
                 }
             }
+        } else if (id != null) {
+            yOffset = getOffsetFromGeneratorId(id, getConfig().getInt(Properties.Y_OFFSET));
         } else {
             yOffset = getConfig().getInt(Properties.Y_OFFSET);
         }
         return new RealWorldGenerator(yOffset, this);
     }
-
 
     public void enforceDatapackInstallation(String datapackResourcePath, @NotNull World world) {
         String datapackName = Path.of(datapackResourcePath).getFileName().toString();
@@ -371,4 +372,11 @@ public final class Terraplusminus extends JavaPlugin implements Listener {
         this.getComponentLogger().info("Created default Terra-- configuration at {}", droppedFile.getAbsolutePath());
     }
 
+    private int getOffsetFromGeneratorId(String generatorId, int defaultOffset) {
+        try {
+            return Integer.parseInt(generatorId);
+        } catch (NumberFormatException e) {
+            return defaultOffset;
+        }
+    }
 }
