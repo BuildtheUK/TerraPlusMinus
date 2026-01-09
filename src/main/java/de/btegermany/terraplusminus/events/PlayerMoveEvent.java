@@ -80,7 +80,7 @@ public class PlayerMoveEvent implements Listener {
 
     @EventHandler
     void onPlayerFall(org.bukkit.event.player.PlayerMoveEvent event) {
-        if (!this.linkedWorldsEnabled && !this.linkedWorldsMethod.equalsIgnoreCase(Properties.NonConfigurable.METHOD_MV)) {
+        if (!this.linkedWorldsEnabled || !this.linkedWorldsMethod.equalsIgnoreCase(Properties.NonConfigurable.METHOD_MV)) {
             return;
         }
 

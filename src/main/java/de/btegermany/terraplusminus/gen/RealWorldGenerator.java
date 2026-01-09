@@ -221,6 +221,17 @@ public class RealWorldGenerator extends ChunkGenerator {
         }
     }
 
+    /**
+     * Gets Chunk Data async with the supplied chunk coordinates.
+     *
+     * @param chunkX The Chunk X coordinate
+     * @param chunkZ The Chunk Z coordinate
+     * @return A CompletableFuture containing the CachedChunkData
+     */
+    public CompletableFuture<CachedChunkData> getBaseHeightAsync(int chunkX, int chunkZ) {
+        return this.cache.getUnchecked(new ChunkPos(chunkX, chunkZ));
+    }
+
     @Override
     public int getBaseHeight(@NotNull WorldInfo worldInfo, @NotNull Random random, int x, int z, @NotNull HeightMap heightMap) {
         int chunkX = blockToCube(x);
@@ -236,12 +247,6 @@ public class RealWorldGenerator extends ChunkGenerator {
                 return terraData.surfaceHeight(x, z) + this.yOffset;
             }
         }
-    }
-
-    public CompletableFuture<CachedChunkData> getBaseHeightAsync(int x, int z) {
-        int chunkX = blockToCube(x);
-        int chunkZ = blockToCube(z);
-        return this.cache.getUnchecked(new ChunkPos(chunkX, chunkZ));
     }
 
     @Override
