@@ -98,7 +98,7 @@ public final class Terraplusminus extends JavaPlugin implements Listener {
                 (getConfig().getBoolean(Properties.LINKED_WORLDS_ENABLED) && getConfig().getString(Properties.LINKED_WORLDS_METHOD, "").equalsIgnoreCase("MULTIVERSE"))) {
             Bukkit.getPluginManager().registerEvents(new PlayerMoveEvent(this), this);
         }
-        if (getConfig().getBoolean(Properties.LINKED_WORLDS_ENABLED)) {
+        if (getConfig().getBoolean(Properties.LINKED_WORLDS_ENABLED) && !getConfig().getString(Properties.LINKED_WORLDS_METHOD, "").equalsIgnoreCase("CUSTOM")) {
             Bukkit.getPluginManager().registerEvents(new PlayerJoinEvent(playerHashMapManagement, this), this);
         }
 
@@ -145,6 +145,7 @@ public final class Terraplusminus extends JavaPlugin implements Listener {
     @Override
     public @NotNull ChunkGenerator getDefaultWorldGenerator(@NotNull String worldName, String id) {
         // Multiverse different y-offset support
+        getLogger().info("Generating world: " + worldName + " with generator id: " + id);
         int yOffset = 0;
         if (getConfig().getBoolean(Properties.LINKED_WORLDS_ENABLED)
                 && getConfig().getString(Properties.LINKED_WORLDS_METHOD, "").equalsIgnoreCase(Properties.NonConfigurable.METHOD_MV)) {
