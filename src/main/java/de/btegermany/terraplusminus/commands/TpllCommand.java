@@ -202,12 +202,12 @@ public class TpllCommand {
                 return;
             }
             World linkedWorld = Bukkit.getWorld(linked.getWorldName());
-            double newHeight = mcCoords.getY() + linked.getOffset() + 1;
+            double newHeight = mcCoords.getBlockY() + linked.getOffset() + 1;
             target.sendMessage(prefix + "§7Teleporting to linked world...");
             target.teleportAsync(new Location(linkedWorld, mcCoords.getX() + xOff, newHeight, mcCoords.getZ() + zOff, target.getLocation().getYaw(), target.getLocation().getPitch()))
                     .thenAcceptAsync(success -> {
                         if (Boolean.TRUE.equals(success))
-                            target.sendMessage(prefix + "§7Teleported to " + geoCoords.getLat() + ", " + geoCoords.getLng() + ", " + mcCoords.getBlockY() + ".");
+                            target.sendMessage(prefix + "§7Teleported to " + geoCoords.getLat() + ", " + geoCoords.getLng() + ", " + (mcCoords.getBlockY() + 1) + ".");
                     });
         }
     }
@@ -253,7 +253,7 @@ public class TpllCommand {
                 target.getLocation().getPitch());
 
         target.teleportAsync(location, PlayerTeleportEvent.TeleportCause.COMMAND);
-        target.sendMessage(prefix + "§7Teleported to " + geoCoords.getLat() + ", " + geoCoords.getLng() + ", " + mcCoords.getBlockY() + ".");
+        target.sendMessage(prefix + "§7Teleported to " + geoCoords.getLat() + ", " + geoCoords.getLng() + ", " + (mcCoords.getBlockY() + 1) + ".");
     }
     // </editor-fold>
 
