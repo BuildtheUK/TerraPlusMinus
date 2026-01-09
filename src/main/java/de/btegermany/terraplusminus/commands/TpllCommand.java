@@ -192,13 +192,7 @@ public class TpllCommand {
      * @param xOff      The configured X-offset
      * @param zOff      The configured Z-offset
      */
-    private static void handleLinkedWorlds(Player target, boolean isNext, LatLng geoCoords, @NonNull Vector mcCoords, int xOff, int zOff) {
-        String method = Terraplusminus.config.getString(Properties.LINKED_WORLDS_METHOD, "");
-        if (!Terraplusminus.config.getBoolean(Properties.LINKED_WORLDS_ENABLED)) {
-            target.sendMessage(prefix + RED + "World height limit reached!");
-            return;
-        }
-
+    private static void handleLinkedWorlds(Player target, boolean isNext, LatLng geoCoords, @NonNull Vector mcCoords, int xOff, int zOff, String method) {
         if (method.equalsIgnoreCase(Properties.NonConfigurable.METHOD_SRV)) {
             sendPluginMessageToBungeeBridge(isNext, target, geoCoords);
         } else if (method.equalsIgnoreCase(Properties.NonConfigurable.METHOD_MV)) {
@@ -237,12 +231,18 @@ public class TpllCommand {
 
         Terraplusminus.instance.getComponentLogger().debug("Current world max height: {}, min height: {}, requested height: {}", tpWorld.getMaxHeight(), tpWorld.getMinHeight(), destinationY);
 
-        if (destinationY > tpWorld.getMaxHeight()) {
-            handleLinkedWorlds(target, true, geoCoords, mcCoords, xOffset, zOffset);
-            return;
-        } else if (destinationY <= tpWorld.getMinHeight()) {
-            handleLinkedWorlds(target, false, geoCoords, mcCoords, xOffset, zOffset);
-            return;
+        if (destinationY > tpWorld.getMaxHeight() || destinationY <= tpWorld.getMinHeight()) {
+            if (!Terraplusminus.config.getBoolean(Properties.LINKED_WORLDS_ENABLED)) {
+                target.sendMessage(prefix + RED + "World height limit reached!");
+                return;
+            } else {
+                String method = Terraplusminus.config.getString(Properties.LINKED_WORLDS_METHOD, "");
+                if (method.equalsIgnoreCase(Properties.NonConfigurable.METHOD_SRV) || method.equalsIgnoreCase(Properties.NonConfigurable.METHOD_MV)) {
+                    boolean isNext = destinationY > tpWorld.getMaxHeight();
+                    handleLinkedWorlds(target, isNext, geoCoords, mcCoords, xOffset, zOffset, method);
+                    return;
+                }
+            }
         }
 
         Location location = new Location(tpWorld,

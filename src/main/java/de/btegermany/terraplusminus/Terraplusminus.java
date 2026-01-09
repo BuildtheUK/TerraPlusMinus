@@ -85,7 +85,7 @@ public final class Terraplusminus extends JavaPlugin implements Listener {
         this.getServer().getMessenger().registerIncomingPluginChannel(this, "bungeecord:terraplusminus", pluginMessageListener);
 
         // Linked Server current server initialization
-        if (getConfig().getBoolean(Properties.LINKED_WORLDS_ENABLED) && getConfig().getString(Properties.LINKED_WORLDS_METHOD, "").equalsIgnoreCase("SERVER")) {
+        if (getConfig().getBoolean(Properties.LINKED_WORLDS_ENABLED) && getConfig().getString(Properties.LINKED_WORLDS_METHOD, "").equalsIgnoreCase(Properties.NonConfigurable.METHOD_SRV)) {
             this.getServer().getMessenger().registerOutgoingPluginChannel(this, "BungeeCord");
             this.getServer().getMessenger().registerIncomingPluginChannel(this, "BungeeCord", pluginMessageListener);
             getComponentLogger().debug("Linked server initialization successful");
@@ -95,10 +95,10 @@ public final class Terraplusminus extends JavaPlugin implements Listener {
         // Registering events
         Bukkit.getPluginManager().registerEvents(this, this);
         if (getConfig().getBoolean("height_in_actionbar") ||
-                (getConfig().getBoolean(Properties.LINKED_WORLDS_ENABLED) && getConfig().getString(Properties.LINKED_WORLDS_METHOD, "").equalsIgnoreCase("MULTIVERSE"))) {
+                (getConfig().getBoolean(Properties.LINKED_WORLDS_ENABLED) && getConfig().getString(Properties.LINKED_WORLDS_METHOD, "").equalsIgnoreCase(Properties.NonConfigurable.METHOD_MV))) {
             Bukkit.getPluginManager().registerEvents(new PlayerMoveEvent(this), this);
         }
-        if (getConfig().getBoolean(Properties.LINKED_WORLDS_ENABLED) && !getConfig().getString(Properties.LINKED_WORLDS_METHOD, "").equalsIgnoreCase("CUSTOM")) {
+        if (getConfig().getBoolean(Properties.LINKED_WORLDS_ENABLED) && !getConfig().getString(Properties.LINKED_WORLDS_METHOD, "").equalsIgnoreCase(Properties.NonConfigurable.METHOD_CUSTOM)) {
             Bukkit.getPluginManager().registerEvents(new PlayerJoinEvent(playerHashMapManagement, this), this);
         }
 
