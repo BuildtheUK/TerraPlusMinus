@@ -194,8 +194,7 @@ public class TpllCommand {
      */
     private static void handleLinkedWorlds(Player target, boolean isNext, LatLng geoCoords, @NonNull Vector mcCoords, int xOff, int zOff) {
         String method = Terraplusminus.config.getString(Properties.LINKED_WORLDS_METHOD, "");
-        if (!Terraplusminus.config.getBoolean(Properties.LINKED_WORLDS_ENABLED) ||
-                !(method.equalsIgnoreCase(Properties.NonConfigurable.METHOD_SRV) || method.equalsIgnoreCase(Properties.NonConfigurable.METHOD_MV))) {
+        if (!Terraplusminus.config.getBoolean(Properties.LINKED_WORLDS_ENABLED)) {
             target.sendMessage(prefix + RED + "World height limit reached!");
             return;
         }
