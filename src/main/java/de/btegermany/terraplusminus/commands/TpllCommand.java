@@ -212,8 +212,7 @@ public class TpllCommand {
      * @param yOff      The configured Y-offset - used for calculating the new right height
      * @param worldName The name of the current world. Used for cross-world teleportation.
      */
-    private static void handleLinkedWorlds(Player target, boolean isNext, LatLng geoCoords, @NonNull Vector mcCoords, double yOff, String worldName) {
-        String method = Terraplusminus.config.getString(Properties.LINKED_WORLDS_METHOD, "");
+    private static void handleLinkedWorlds(Player target, boolean isNext, LatLng geoCoords, @NonNull Vector mcCoords, double yOff, String method, String worldName) {
         if (!Terraplusminus.config.getBoolean(Properties.LINKED_WORLDS_ENABLED) ||
                 !(method.equalsIgnoreCase(Properties.NonConfigurable.METHOD_SRV) || method.equalsIgnoreCase(Properties.NonConfigurable.METHOD_MV))) {
             target.sendMessage(prefix + RED + "World height limit reached!");
@@ -272,7 +271,7 @@ public class TpllCommand {
                 String method = Terraplusminus.config.getString(Properties.LINKED_WORLDS_METHOD, "");
                 if (method.equalsIgnoreCase(Properties.NonConfigurable.METHOD_SRV) || method.equalsIgnoreCase(Properties.NonConfigurable.METHOD_MV)) {
                     boolean isNext = mcCoords.getBlockY() > tpWorld.getMaxHeight();
-                    handleLinkedWorlds(target, isNext, geoCoords, mcCoords, xOffset, zOffset, method);
+                    handleLinkedWorlds(target, isNext, geoCoords, mcCoords, yOffset, method);
                     return;
                 }
             }
