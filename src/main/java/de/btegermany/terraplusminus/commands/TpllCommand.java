@@ -40,6 +40,7 @@ import org.jspecify.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
 import static org.bukkit.ChatColor.RED;
 
@@ -130,7 +131,7 @@ public class TpllCommand {
         double z;
         try {
             double[] mcCoordinates = projection.fromGeo(latLngHeight.latLng().getLng(), latLngHeight.latLng().getLat()); // projection.fromGeo is eccentric and expects lon, lat
-            x = mcCoordinates[0];
+            x = mcCoordinates[0]; // These Coordinates already contain the configured offsets
             z = mcCoordinates[1];
         } catch (OutOfProjectionBoundsException e) {
             sender.sendMessage(prefix + "§cLocation is not within projection bounds.");
@@ -149,24 +150,28 @@ public class TpllCommand {
         int yOffset = terraGenerator.getYOffset();
 
         if (!config.getBoolean(Properties.LINKED_WORLDS_ENABLED) && latLngHeight.height() == null) {
+            Terraplusminus.instance.getComponentLogger().debug("Fetching elevation from Heightmap...");
             finalizeTeleport(target,
                     tpWorld,
-                    new Vector(x, tpWorld.getHighestBlockYAt((int) x, (int) z), z),
+                    new Vector(x, tpWorld.getHighestBlockYAt((int) x, (int) z) + 1d, z),
                     latLngHeight.latLng(),
                     config, yOffset);
             return;
         }
 
         if (latLngHeight.height() == null) {
+            Terraplusminus.instance.getComponentLogger().debug("Fetching elevation from API...");
             int roundedX = (int) Math.round(x);
             int roundedZ = (int) Math.round(z);
+            int chunkX = ChunkPos.blockToCube(roundedX);
+            int chunkZ = ChunkPos.blockToCube(roundedZ);
             World finalTpWorld = tpWorld;
-            terraGenerator.getBaseHeightAsync(roundedX, roundedZ)
+            terraGenerator.getBaseHeightAsync(chunkX, chunkZ)
                     .thenAcceptAsync(baseHeight ->
                             finalizeTeleport(target,
                                     finalTpWorld,
-                                    new Vector(x, baseHeight.groundHeight(roundedX - ChunkPos.cubeToMinBlock(ChunkPos.blockToCube(roundedX)),
-                                            roundedX - ChunkPos.cubeToMinBlock(ChunkPos.blockToCube(roundedX))), z),
+                                    new Vector(x, baseHeight.surfaceHeight(roundedX - ChunkPos.cubeToMinBlock(chunkX),
+                                            roundedZ - ChunkPos.cubeToMinBlock(chunkZ)) + yOffset + 1d, z),
                                     latLngHeight.latLng(),
                                     config,
                                     yOffset
@@ -176,7 +181,7 @@ public class TpllCommand {
                         return null;
                     });
         } else {
-            finalizeTeleport(target, tpWorld, new Vector(x, latLngHeight.height(), z), latLngHeight.latLng(), config, yOffset);
+            finalizeTeleport(target, tpWorld, new Vector(x, latLngHeight.height() + yOffset, z), latLngHeight.latLng(), config, yOffset);
         }
     }
 
@@ -189,25 +194,56 @@ public class TpllCommand {
      * @param isNext    Teleport to next or previous world?
      * @param geoCoords The parsed latitude, longitude
      * @param mcCoords  The calculated Minecraft X/Y/Z coordinates
-     * @param xOff      The configured X-offset
-     * @param zOff      The configured Z-offset
+     * @param yOff      The configured Y-offset - used for calculating the new right height
      */
-    private static void handleLinkedWorlds(Player target, boolean isNext, LatLng geoCoords, @NonNull Vector mcCoords, int xOff, int zOff, String method) {
+    private static void handleLinkedWorlds(Player target, boolean isNext, LatLng geoCoords, @NonNull Vector mcCoords, double yOff, String method) {
+        handleLinkedWorlds(target, isNext, geoCoords, mcCoords, yOff, target.getWorld().getName());
+    }
+
+    /**
+     * Teleports a player to a higher-elevation linked Multiverse world or another server.
+     * <p>
+     * Used when the target height exceeds the current world's maximum height.
+     *
+     * @param target    The player to teleport
+     * @param isNext    Teleport to next or previous world?
+     * @param geoCoords The parsed latitude, longitude
+     * @param mcCoords  The calculated Minecraft X/Y/Z coordinates
+     * @param yOff      The configured Y-offset - used for calculating the new right height
+     * @param worldName The name of the current world. Used for cross-world teleportation.
+     */
+    private static void handleLinkedWorlds(Player target, boolean isNext, LatLng geoCoords, @NonNull Vector mcCoords, double yOff, String worldName) {
+        String method = Terraplusminus.config.getString(Properties.LINKED_WORLDS_METHOD, "");
+        if (!Terraplusminus.config.getBoolean(Properties.LINKED_WORLDS_ENABLED) ||
+                !(method.equalsIgnoreCase(Properties.NonConfigurable.METHOD_SRV) || method.equalsIgnoreCase(Properties.NonConfigurable.METHOD_MV))) {
+            target.sendMessage(prefix + RED + "World height limit reached!");
+            return;
+        }
+
         if (method.equalsIgnoreCase(Properties.NonConfigurable.METHOD_SRV)) {
             sendPluginMessageToBungeeBridge(isNext, target, geoCoords);
         } else if (method.equalsIgnoreCase(Properties.NonConfigurable.METHOD_MV)) {
-            LinkedWorld linked = isNext ? ConfigurationHelper.getNextServerName(target.getWorld().getName()) : ConfigurationHelper.getPreviousServerName(target.getWorld().getName());
+            LinkedWorld linked = isNext ? ConfigurationHelper.getNextServerName(worldName) : ConfigurationHelper.getPreviousServerName(worldName);
             if (linked == null) {
                 target.sendMessage(prefix + RED + "No linked world found!");
                 return;
             }
             World linkedWorld = Bukkit.getWorld(linked.getWorldName());
-            double newHeight = mcCoords.getBlockY() + linked.getOffset() + 1;
+            double newHeight = mcCoords.getY() - yOff + linked.getOffset() + 1;
+
+            if (newHeight > Objects.requireNonNull(linkedWorld, "Linked world was removed from Bukkit").getMaxHeight()) {
+                handleLinkedWorlds(target, true, geoCoords, new Vector(mcCoords.getX(), newHeight, mcCoords.getZ()), linked.getOffset(), linkedWorld.getName());
+                return;
+            } else if (newHeight <= linkedWorld.getMinHeight()) {
+                handleLinkedWorlds(target, false, geoCoords, new Vector(mcCoords.getX(), newHeight, mcCoords.getZ()), linked.getOffset(), linkedWorld.getName());
+                return;
+            }
+
             target.sendMessage(prefix + "§7Teleporting to linked world...");
-            target.teleportAsync(new Location(linkedWorld, mcCoords.getX() + xOff, newHeight, mcCoords.getZ() + zOff, target.getLocation().getYaw(), target.getLocation().getPitch()))
+            target.teleportAsync(new Location(linkedWorld, mcCoords.getX(), newHeight, mcCoords.getZ(), target.getLocation().getYaw(), target.getLocation().getPitch()))
                     .thenAcceptAsync(success -> {
                         if (Boolean.TRUE.equals(success))
-                            target.sendMessage(prefix + "§7Teleported to " + geoCoords.getLat() + ", " + geoCoords.getLng() + ", " + (mcCoords.getBlockY() + 1) + ".");
+                            target.sendMessage(prefix + "§7Teleported to " + geoCoords.getLat() + ", " + geoCoords.getLng() + ", " + (mcCoords.getBlockY() - yOff) + ".");
                     });
         }
     }
@@ -225,20 +261,17 @@ public class TpllCommand {
      * @param yOffset   The configured terrain offset
      */
     private static void finalizeTeleport(@NotNull Player target, @NonNull World tpWorld, @NonNull Vector mcCoords, LatLng geoCoords, @NonNull FileConfiguration config, int yOffset) {
-        int xOffset = config.getInt(Properties.X_OFFSET);
-        int zOffset = config.getInt(Properties.Z_OFFSET);
-        int destinationY = mcCoords.getBlockY() + yOffset + 1; // You want to stand above the block you are teleporting to
 
-        Terraplusminus.instance.getComponentLogger().debug("Current world max height: {}, min height: {}, requested height: {}", tpWorld.getMaxHeight(), tpWorld.getMinHeight(), destinationY);
+        Terraplusminus.instance.getComponentLogger().debug("Current world max height: {}, min height: {}, requested height: {}", tpWorld.getMaxHeight(), tpWorld.getMinHeight(), mcCoords.getBlockY());
 
-        if (destinationY > tpWorld.getMaxHeight() || destinationY <= tpWorld.getMinHeight()) {
+        if (mcCoords.getBlockY() > tpWorld.getMaxHeight() || mcCoords.getBlockY() <= tpWorld.getMinHeight()) {
             if (!Terraplusminus.config.getBoolean(Properties.LINKED_WORLDS_ENABLED)) {
                 target.sendMessage(prefix + RED + "World height limit reached!");
                 return;
             } else {
                 String method = Terraplusminus.config.getString(Properties.LINKED_WORLDS_METHOD, "");
                 if (method.equalsIgnoreCase(Properties.NonConfigurable.METHOD_SRV) || method.equalsIgnoreCase(Properties.NonConfigurable.METHOD_MV)) {
-                    boolean isNext = destinationY > tpWorld.getMaxHeight();
+                    boolean isNext = mcCoords.getBlockY() > tpWorld.getMaxHeight();
                     handleLinkedWorlds(target, isNext, geoCoords, mcCoords, xOffset, zOffset, method);
                     return;
                 }
@@ -246,14 +279,14 @@ public class TpllCommand {
         }
 
         Location location = new Location(tpWorld,
-                mcCoords.getX() + xOffset,
-                destinationY,
-                mcCoords.getZ() + zOffset,
+                mcCoords.getX(),
+                mcCoords.getBlockY(),
+                mcCoords.getZ(),
                 target.getLocation().getYaw(),
                 target.getLocation().getPitch());
 
         target.teleportAsync(location, PlayerTeleportEvent.TeleportCause.COMMAND);
-        target.sendMessage(prefix + "§7Teleported to " + geoCoords.getLat() + ", " + geoCoords.getLng() + ", " + (mcCoords.getBlockY() + 1) + ".");
+        target.sendMessage(prefix + "§7Teleported to " + geoCoords.getLat() + ", " + geoCoords.getLng() + ", " + (mcCoords.getBlockY() - yOffset) + ".");
     }
     // </editor-fold>
 
