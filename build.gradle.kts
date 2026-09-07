@@ -16,6 +16,8 @@ repositories {
 
     maven("https://maven.buildtheearth.net/releases") // T-- & Porkchop Lib
 
+    maven("https://jitpack.io")
+
     exclusiveContent {
         forRepository {
             maven {
