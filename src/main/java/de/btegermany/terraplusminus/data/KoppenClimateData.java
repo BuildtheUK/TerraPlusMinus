@@ -6,7 +6,6 @@ import net.daporkchop.lib.common.reference.cache.Cached;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.function.Supplier;
 import java.util.zip.GZIPInputStream;
 
 import static net.daporkchop.lib.common.util.PValidation.checkState;
@@ -20,7 +19,7 @@ public class KoppenClimateData extends AbstractBuiltinDataset {
         super(COLUMNS, ROWS);
     }
 
-    private static final Cached<RLEByteArray> CACHE = Cached.global((Supplier<RLEByteArray>) () -> {
+    private static final Cached<RLEByteArray> CACHE = Cached.global(() -> {
         RLEByteArray.Builder builder = RLEByteArray.builder();
 
         try (InputStream compressedStream = KoppenClimateData.class.getResourceAsStream("/koppen_map.gz")) {

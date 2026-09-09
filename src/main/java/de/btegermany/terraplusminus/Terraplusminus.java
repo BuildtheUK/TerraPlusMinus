@@ -18,8 +18,7 @@ import lombok.Getter;
 import lombok.Setter;
 import net.buildtheearth.terraminusminus.TerraConfig;
 import net.buildtheearth.terraminusminus.TerraConstants;
-import net.buildtheearth.terraminusminus.util.http.Disk;
-import net.buildtheearth.terraminusminus.util.http.Http;
+import net.buildtheearth.terraminusminus.TerraminusminusService;
 import org.bstats.bukkit.Metrics;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
@@ -62,10 +61,15 @@ public final class Terraplusminus extends JavaPlugin implements Listener {
     @Setter
     private String registeredServerName = null;
 
+    @Getter
+    private TerraminusminusService terraminusminusService;
+
     @Override
     public void onEnable() {
         new Metrics(this, 28392); // https://bstats.org/plugin/bukkit/Terraplusminus/28392
         instance = this;
+
+        this.terraminusminusService = getServer().getServicesManager().load(TerraminusminusService.class);
 
         // Config ------------------]
         ConfigurationSerialization.registerClass(ConfigurationSerializable.class);
@@ -74,8 +78,6 @@ public final class Terraplusminus extends JavaPlugin implements Listener {
         this.updateConfig();
         // --------------------------
 
-        // Set-up Terra-- so it looks for its config files in our plugin dir, and then copy its default files there
-        this.setupTerraMinusMinus();
         this.extractTerraConfigFileToPluginDir("/net/buildtheearth/terraminusminus/dataset/osm/osm.json5", "osm.json5");
         this.extractTerraConfigFileToPluginDir("config/readme-heights.md", "heights/README.md");
         this.extractTerraConfigFileToPluginDir("config/readme-tree_cover.md", "tree_cover/README.md");
@@ -124,9 +126,6 @@ public final class Terraplusminus extends JavaPlugin implements Listener {
             );
         }
         // --------------------------
-
-        TerraConfig.reducedConsoleMessages =
-                getConfig().getBoolean("reduced_console_messages"); // Disables console log of fetching data
 
         registerCommands();
 
@@ -377,7 +376,7 @@ public final class Terraplusminus extends JavaPlugin implements Listener {
             final Commands commands = event.registrar();
 
             commands.register(
-                    TpllCommand.create(),
+                    new TpllCommand(this, terraminusminusService).create(),
                     "tpll",
                     List.of("tpc")
             );
@@ -385,7 +384,7 @@ public final class Terraplusminus extends JavaPlugin implements Listener {
             commands.register(
                     "where",
                     "Gives you the longitude and latitude of your minecraft coordinates",
-                    new WhereCommand()
+                    new WhereCommand(this, terraminusminusService)
             );
 
             commands.register(
@@ -400,16 +399,6 @@ public final class Terraplusminus extends JavaPlugin implements Listener {
                     new DistortionCommand()
             );
         });
-    }
-
-    private void setupTerraMinusMinus() {
-        FolderMigrator.migrateTerraPlusPlusFolder(getComponentLogger(), getDataFolder());
-        Disk.setConfigRoot(this.getDataFolder());
-        Disk.setCacheRoot(this.getDataPath().resolve("cache").toFile());
-
-        String userAgent = this.createHttpUserAgent();
-        this.getComponentLogger().debug("Terraplusminus HTTP user agent: {}", userAgent);
-        Http.userAgent(userAgent);
     }
 
     private @NonNull String getVersion() {

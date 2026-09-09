@@ -11,7 +11,7 @@ paper-api = "1.21.11-R0.1-SNAPSHOT"
 # https://github.com/OakLoaf/PluginUpdater/releases https://repo.lushplugins.org/#/releases/org/lushplugins/pluginupdater/updater.paper-api
 pluginupdater = "3.0.0"
 # https://maven.smyler.net/#/releases/net/buildtheearth/terraminusminus/terraminusminus-bukkit - use fork which uses daporkchop lib as releases
-terraminusminus = "b55b88cff3"
+terraminusminus = "c997a29a57"
 # https://jspecify.dev/docs/
 jspecify = "1.0.0"
 # https://javadoc.io/doc/org.jetbrains/annotations/latest/index.html
@@ -35,7 +35,7 @@ jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind", ver
 paper-api = { module = "io.papermc.paper:paper-api", version.ref = "paper-api" }
 pluginupdater-paper = { module = "org.lushplugins.pluginupdater:updater.paper-api", version.ref = "pluginupdater" }
 pluginupdater-common = { module = "org.lushplugins.pluginupdater:updater.common-api", version.ref = "pluginupdater" }
-terraminusminus = { module = "com.github.BuildtheUK:terraminusminus", version.ref = "terraminusminus" }
+terraminusminus = { module = "com.github.BuildtheUK.terraminusminus:terraminusminus-bukkit", version.ref = "terraminusminus" }
 jspecify = { module = "org.jspecify:jspecify", version.ref = "jspecify" }
 jetbrains-annotations = { module = "org.jetbrains:annotations", version.ref = "jetbrains-annotations" }
 

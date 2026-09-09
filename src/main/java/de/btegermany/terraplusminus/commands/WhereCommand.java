@@ -4,6 +4,7 @@ import de.btegermany.terraplusminus.Terraplusminus;
 import de.btegermany.terraplusminus.utils.Permission;
 import io.papermc.paper.command.brigadier.BasicCommand;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
+import net.buildtheearth.terraminusminus.TerraminusminusService;
 import net.buildtheearth.terraminusminus.generator.EarthGeneratorSettings;
 import net.buildtheearth.terraminusminus.projection.OutOfProjectionBoundsException;
 import net.md_5.bungee.api.chat.ClickEvent;
@@ -18,7 +19,13 @@ import org.jspecify.annotations.Nullable;
 
 public class WhereCommand implements BasicCommand {
 
-    private final EarthGeneratorSettings bteGeneratorSettings = EarthGeneratorSettings.parse(EarthGeneratorSettings.BTE_DEFAULT_SETTINGS);
+    private final Terraplusminus plugin;
+    private final TerraminusminusService terraminusminusService;
+
+    public WhereCommand(Terraplusminus plugin, TerraminusminusService terraminusminusService) {
+        this.plugin = plugin;
+        this.terraminusminusService = terraminusminusService;
+    }
 
     @Override
     public boolean canUse(final @NonNull CommandSender sender) {
@@ -29,15 +36,15 @@ public class WhereCommand implements BasicCommand {
     public void execute(@NonNull CommandSourceStack stack, String @Nullable [] args) {
         if (!(stack.getSender() instanceof Player player)) return; // Will not happen because of Brigadier
 
-        int xOffset = Terraplusminus.config.getInt("terrain_offset.x");
-        int zOffset = Terraplusminus.config.getInt("terrain_offset.z");
+        int xOffset = plugin.getConfig().getInt("terrain_offset.x");
+        int zOffset = plugin.getConfig().getInt("terrain_offset.z");
 
-        TextComponent message = new TextComponent(Terraplusminus.config.getString("prefix"));
+        TextComponent message = new TextComponent(plugin.getConfig().getString("prefix"));
 
         double playerX = player.getLocation().getX() - xOffset;
         double playerZ = player.getLocation().getZ() - zOffset;
         try {
-            double[] coordinates = this.bteGeneratorSettings.projection().toGeo(playerX, playerZ);
+            double[] coordinates = terraminusminusService.toGeo(playerX, playerZ);
             message.addExtra("§7Your coordinates are:");
             message.addExtra("\n§8" + coordinates[1] + ", " + coordinates[0] + "§7.");
             message.setClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, "https://maps.google.com/maps?t=k&q=loc:" + coordinates[1] + "+" + coordinates[0]));

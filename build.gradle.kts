@@ -1,4 +1,5 @@
 import net.minecrell.pluginyml.bukkit.BukkitPluginDescription
+import net.minecrell.pluginyml.paper.PaperPluginDescription
 
 plugins {
     `java-library`
@@ -38,8 +39,8 @@ repositories {
 }
 
 dependencies {
-    paperLibrary(libs.terraminusminus)
-    paperLibrary(libs.daporkchop.lib.common)
+    compileOnly(libs.terraminusminus)
+    compileOnly(libs.daporkchop.lib.common)
     implementation(libs.bstats)
     paperLibrary(libs.pluginupdater.common) {
         exclude(group = "com.google.guava", module = "guava")
@@ -56,7 +57,7 @@ dependencies {
 group = "de.btegermany"
 version = "1.7.2-SNAPSHOT"
 description = "A plugin which implements the terra-- api in a paper plugin"
-java.sourceCompatibility = JavaVersion.VERSION_21
+java.sourceCompatibility = JavaVersion.VERSION_25
 
 tasks.withType<JavaCompile> {
     options.encoding = "UTF-8"
@@ -71,7 +72,7 @@ paper {
 
     main = "de.btegermany.terraplusminus.Terraplusminus"
 
-    apiVersion = "1.21"
+    apiVersion = "26.2"
 
     load = BukkitPluginDescription.PluginLoadOrder.STARTUP
     authors = listOf("meysster", "Nudlsupp", "Nachwahl", "Zoriot")
@@ -80,6 +81,14 @@ paper {
 
     loader = "de.btegermany.terraplusminus.PluginLibrariesLoader"
     generateLibrariesJson = true // https://docs.eldoria.de/pluginyml/libraries/#paper
+
+    serverDependencies {
+        register("terraminusminus") {
+            load = PaperPluginDescription.RelativeLoadOrder.BEFORE
+            required = true
+            joinClasspath = true
+        }
+    }
 }
 
 tasks {
